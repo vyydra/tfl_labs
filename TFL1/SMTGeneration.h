@@ -27,7 +27,6 @@ std::pair<std::string, std::string> parseInput(const std::string& input) {
 }
 
 void generateRequirements(std::ofstream& smtFile, std::vector<char>& symbols, const std::pair<std::string, std::string>& sides, const std::map<std::pair<int, bool>, std::string>& lhs, const std::map<std::pair<int, bool>, std::string>& rhs) {
-
     for (auto symbol : sides.first) {
         if (std::find(symbols.begin(), symbols.end(), symbol) == symbols.end()) {
             smtFile << "(declare-fun a_" << symbol << " () Int)" << std::endl;
@@ -66,7 +65,7 @@ void generateRequirements(std::ofstream& smtFile, std::vector<char>& symbols, co
 
 bool executeSMTSolver(const std::string& smtFile, std::string& output) {
     std::stringstream command;
-    command << R"(C:\z3-4.12.2-x64-win\bin\z3.exe -smt2 )" << smtFile;
+    command << R"(z3.exe -smt2 )" << smtFile;
 
     FILE* pipe = popen(command.str().c_str(), "r");
     if (!pipe) {
