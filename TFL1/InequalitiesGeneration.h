@@ -12,6 +12,7 @@ std::map<std::pair<int, bool>, std::string> extractCoefficients(Node* node, int 
     if (ordinalNode != nullptr) {
         if (ordinalNode->ordinal.value == "w") {
             if (is_w) {
+
                 coefficients[{degree_w, is_x}] = ordinalNode->ordinal.coefficient;
             } else {
                 coefficients[{ordinalNode->ordinal.degree, is_x}] = ordinalNode->ordinal.coefficient;
@@ -109,206 +110,410 @@ std::vector<std::string> splitByMultiplication(const std::string& expression) {
     return terms;
 }
 
-std::vector<std::string> generateInequalities(const std::map<std::pair<int, bool>, std::string>& lhs, const std::map<std::pair<int, bool>, std::string>& rhs) {
-    std::vector<std::string> result = {};
-    for (const auto & lhsPair : lhs) {
-        std::pair<int, bool> degrees = lhsPair.first;
-        std::string lhsCoefficient = lhsPair.second;
+std::string generateLogicalExpression(const std::vector<std::pair<int, std::string>>& lhs, const std::vector<std::pair<int, std::string>>& rhs, const std::string& comparator = "") {
+    std::string expression;
+    int helper = 0;
 
-        if (rhs.count(degrees) > 0) {
-            const std::string& rhsCoefficient = rhs.at(degrees);
-            std::string inequality;
+    if (!comparator.empty()) {
+        for (auto lhsIt = lhs.begin(), rhsIt = rhs.begin(); lhsIt != lhs.end() && rhsIt != rhs.end(); ) {
+            int degree = lhsIt->first;
+            std::string lhsCoefficient = lhsIt->second;
 
-            if (!degrees.second) {
-                inequality += "(>= ";
-            } else {
-                inequality += "(> ";
-            }
+            if (rhsIt->first == degree) {
+                std::string rhsCoefficient = rhsIt->second;
+                std::vector<std::string> lhsTerms = splitByAddition(lhsCoefficient);
+                std::vector<std::string> rhsTerms = splitByAddition(rhsCoefficient);
+                std::string lhsNewCoefficient;
+                std::string rhsNewCoefficient;
 
 
-            std::vector<std::string> lhsTerms = splitByAddition(lhsCoefficient);
-            std::vector<std::string> rhsTerms = splitByAddition(rhsCoefficient);
-
-            int addHelper = 0;
-            for (const auto& term : lhsTerms) {
-                if (addHelper != lhsTerms.size() - 1) {
-                    inequality += "(+ ";
-                    addHelper++;
-                } else {
-                    inequality += " ";
-                }
-                std::vector<std::string> lhsMultiplicationTerms = splitByMultiplication(term);
-                if (lhsMultiplicationTerms.size() > 1) {
-                    int multHelper = 0;
-                    for (const auto& multiplicationTerm : lhsMultiplicationTerms) {
-                        if (multHelper != lhsMultiplicationTerms.size() - 1) {
-                            inequality += "(* " + multiplicationTerm + " ";
-                            multHelper++;
-                        } else {
-                            inequality += multiplicationTerm;
-                            for (int i = 0; i < multHelper; i++) {
-                                inequality += ")";
-                            }
-                        }
+                int addHelper = 0;
+                for (const auto& term : lhsTerms) {
+                    if (addHelper != lhsTerms.size() - 1) {
+                        lhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (lhsTerms.size() != 1) {
+                        lhsNewCoefficient += " ";
                     }
-                } else {
-                    inequality += lhsMultiplicationTerms[0];
-                }
-            }
-
-            if (addHelper == lhsTerms.size() - 1) {
-                for (int i = 0; i < addHelper; i++) {
-                    inequality += ")";
-                }
-            }
-
-            inequality += " ";
-
-
-            addHelper = 0;
-            for (const auto& term : rhsTerms) {
-                if (addHelper != rhsTerms.size() - 1) {
-                    inequality += "(+ ";
-                    addHelper++;
-                } else {
-                    inequality += " ";
-                }
-                std::vector<std::string> rhsMultiplicationTerms = splitByMultiplication(term);
-                if (rhsMultiplicationTerms.size() > 1) {
-                    int helper = 0;
-                    for (const auto& multiplicationTerm : rhsMultiplicationTerms) {
-                        if (helper != rhsMultiplicationTerms.size() - 1) {
-                            inequality += "(* " + multiplicationTerm + " ";
-                            helper++;
-                        } else {
-                            inequality += multiplicationTerm;
-                            if (helper != 0) {
-                                for (int i = 0; i < helper; i++) {
-                                    inequality += ")";
+                    std::vector<std::string> lhsMultiplicationTerms = splitByMultiplication(term);
+                    if (lhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : lhsMultiplicationTerms) {
+                            if (multHelper != lhsMultiplicationTerms.size() - 1) {
+                                lhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                lhsNewCoefficient += multiplicationTerm;
+                                for (int i = 0; i < multHelper; i++) {
+                                    lhsNewCoefficient += ")";
                                 }
                             }
                         }
+                    } else {
+                        lhsNewCoefficient += lhsMultiplicationTerms[0];
                     }
+                }
+
+                if (addHelper == lhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        lhsNewCoefficient += ")";
+                    }
+                }
+
+
+                addHelper = 0;
+                for (const auto& term : rhsTerms) {
+                    if (addHelper != rhsTerms.size() - 1) {
+                        rhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (lhsTerms.size() != 1) {
+                        rhsNewCoefficient += " ";
+                    }
+                    std::vector<std::string> rhsMultiplicationTerms = splitByMultiplication(term);
+                    if (rhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : rhsMultiplicationTerms) {
+                            if (multHelper != rhsMultiplicationTerms.size() - 1) {
+                                rhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                rhsNewCoefficient += multiplicationTerm;
+                                if (multHelper != 0) {
+                                    for (int i = 0; i < multHelper; i++) {
+                                        rhsNewCoefficient += ")";
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        rhsNewCoefficient += rhsMultiplicationTerms[0];
+                    }
+                }
+
+                if (addHelper == rhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        rhsNewCoefficient += ")";
+                    }
+                }
+
+                if (lhs.size() > 1 && lhsIt != lhs.end() - 1) {
+                    expression += "(or (" + comparator + " " + lhsNewCoefficient + " " + rhsNewCoefficient + ") (and (= " + lhsNewCoefficient + " " + rhsNewCoefficient + ")";
+                    helper += 2;
                 } else {
-                    inequality += rhsMultiplicationTerms[0];
+                    expression += "(" + comparator + " " + lhsNewCoefficient + " " + rhsNewCoefficient + ")";
+                }
+
+                ++lhsIt;
+                ++rhsIt;
+            } else if (rhsIt->first < degree) {
+                std::vector<std::string> lhsTerms = splitByAddition(lhsCoefficient);
+                std::string lhsNewCoefficient;
+
+
+                int addHelper = 0;
+                for (const auto& term : lhsTerms) {
+                    if (addHelper != lhsTerms.size() - 1) {
+                        lhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (lhsTerms.size() != 1) {
+                        lhsNewCoefficient += " ";
+                    }
+                    std::vector<std::string> lhsMultiplicationTerms = splitByMultiplication(term);
+                    if (lhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : lhsMultiplicationTerms) {
+                            if (multHelper != lhsMultiplicationTerms.size() - 1) {
+                                lhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                lhsNewCoefficient += multiplicationTerm;
+                                for (int i = 0; i < multHelper; i++) {
+                                    lhsNewCoefficient += ")";
+                                }
+                            }
+                        }
+                    } else {
+                        lhsNewCoefficient += lhsMultiplicationTerms[0];
+                    }
+                }
+
+                if (addHelper == lhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        lhsNewCoefficient += ")";
+                    }
+                }
+
+                if (lhs.size() > 1 && lhsIt != lhs.end() - 1) {
+                    expression += "(or (" + comparator + " " + lhsNewCoefficient + " 0) (and (" + comparator + " " + lhsNewCoefficient + " 0) ";
+                    helper += 2;
+                    ++lhsIt;
+                } else {
+                    expression += "(" + comparator + " " + lhsNewCoefficient + " 0) ";
+                    ++lhsIt;
+                }
+            } else {
+                std::string rhsCoefficient = rhsIt->second;
+                std::vector<std::string> rhsTerms = splitByAddition(rhsCoefficient);
+                std::string rhsNewCoefficient;
+
+
+                int addHelper = 0;
+                for (const auto& term : rhsTerms) {
+                    if (addHelper != rhsTerms.size() - 1) {
+                        rhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (rhsTerms.size() != 1) {
+                        rhsNewCoefficient += " ";
+                    }
+                    std::vector<std::string> rhsMultiplicationTerms = splitByMultiplication(term);
+                    if (rhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : rhsMultiplicationTerms) {
+                            if (multHelper != rhsMultiplicationTerms.size() - 1) {
+                                rhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                rhsNewCoefficient += multiplicationTerm;
+                                if (multHelper != 0) {
+                                    for (int i = 0; i < multHelper; i++) {
+                                        rhsNewCoefficient += ")";
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        rhsNewCoefficient += rhsMultiplicationTerms[0];
+                    }
+                }
+
+                if (addHelper == rhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        rhsNewCoefficient += ")";
+                    }
+                }
+
+                if (rhs.size() > 1 && rhsIt != rhs.end() - 1) {
+                    expression += "(or (" + comparator + " 0 " + rhsNewCoefficient + ") (and (= 0 " + rhsNewCoefficient + ") ";
+                    helper += 2;
+                    ++rhsIt;
+                } else {
+                    expression += "(" + comparator + " 0 " + rhsNewCoefficient + ")";
+                    ++rhsIt;
                 }
             }
+        }
 
-            if (addHelper == rhsTerms.size() - 1) {
-                for (int i = 0; i < addHelper; i++) {
-                    inequality += ")";
+        for (int i = 0; i < helper; i++) {
+            expression += ")";
+        }
+    } else {
+        if (!lhs.empty() || !rhs.empty()) {
+            expression += "(and ";
+        }
+        for (auto lhsIt = lhs.begin(), rhsIt = rhs.begin(); lhsIt != lhs.end() && rhsIt != rhs.end(); ) {
+            int degree = lhsIt->first;
+            std::string lhsCoefficient = lhsIt->second;
+
+            if (rhsIt->first == degree) {
+                std::string rhsCoefficient = rhsIt->second;
+                std::vector<std::string> lhsTerms = splitByAddition(lhsCoefficient);
+                std::vector<std::string> rhsTerms = splitByAddition(rhsCoefficient);
+                std::string lhsNewCoefficient;
+                std::string rhsNewCoefficient;
+
+
+                int addHelper = 0;
+                for (const auto& term : lhsTerms) {
+                    if (addHelper != lhsTerms.size() - 1) {
+                        lhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (lhsTerms.size() != 1) {
+                        lhsNewCoefficient += " ";
+                    }
+                    std::vector<std::string> lhsMultiplicationTerms = splitByMultiplication(term);
+                    if (lhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : lhsMultiplicationTerms) {
+                            if (multHelper != lhsMultiplicationTerms.size() - 1) {
+                                lhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                lhsNewCoefficient += multiplicationTerm;
+                                for (int i = 0; i < multHelper; i++) {
+                                    lhsNewCoefficient += ")";
+                                }
+                            }
+                        }
+                    } else {
+                        lhsNewCoefficient += lhsMultiplicationTerms[0];
+                    }
                 }
-            }
 
-            inequality += ")";
-            result.emplace_back(inequality);
+                if (addHelper == lhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        lhsNewCoefficient += ")";
+                    }
+                }
+
+
+                addHelper = 0;
+                for (const auto& term : rhsTerms) {
+                    if (addHelper != rhsTerms.size() - 1) {
+                        rhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (rhsTerms.size() != 1) {
+                        rhsNewCoefficient += " ";
+                    }
+                    std::vector<std::string> rhsMultiplicationTerms = splitByMultiplication(term);
+                    if (rhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : rhsMultiplicationTerms) {
+                            if (multHelper != rhsMultiplicationTerms.size() - 1) {
+                                rhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                rhsNewCoefficient += multiplicationTerm;
+                                if (multHelper != 0) {
+                                    for (int i = 0; i < multHelper; i++) {
+                                        rhsNewCoefficient += ")";
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        rhsNewCoefficient += rhsMultiplicationTerms[0];
+                    }
+                }
+
+                if (addHelper == rhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        rhsNewCoefficient += ")";
+                    }
+                }
+
+                expression += "(= " + lhsNewCoefficient + " " + rhsNewCoefficient + ")";
+
+                lhsIt++;
+                rhsIt++;
+            } else if (rhsIt->first < degree) {
+                std::vector<std::string> lhsTerms = splitByAddition(lhsCoefficient);
+                std::string lhsNewCoefficient;
+
+
+                int addHelper = 0;
+                for (const auto& term : lhsTerms) {
+                    if (addHelper != lhsTerms.size() - 1) {
+                        lhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (lhsTerms.size() != 1) {
+                        lhsNewCoefficient += " ";
+                    }
+                    std::vector<std::string> lhsMultiplicationTerms = splitByMultiplication(term);
+                    if (lhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : lhsMultiplicationTerms) {
+                            if (multHelper != lhsMultiplicationTerms.size() - 1) {
+                                lhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                lhsNewCoefficient += multiplicationTerm;
+                                for (int i = 0; i < multHelper; i++) {
+                                    lhsNewCoefficient += ")";
+                                }
+                            }
+                        }
+                    } else {
+                        lhsNewCoefficient += lhsMultiplicationTerms[0];
+                    }
+                }
+
+                if (addHelper == lhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        lhsNewCoefficient += ")";
+                    }
+                }
+                expression += "(= " + lhsNewCoefficient + " 0)";
+                ++lhsIt;
+            } else {
+                std::string rhsCoefficient = rhsIt->second;
+                std::vector<std::string> rhsTerms = splitByAddition(rhsCoefficient);
+                std::string rhsNewCoefficient;
+
+
+                int addHelper = 0;
+                for (const auto& term : rhsTerms) {
+                    if (addHelper != rhsTerms.size() - 1) {
+                        rhsNewCoefficient += "(+ ";
+                        addHelper++;
+                    } else if (rhsTerms.size() != 1) {
+                        rhsNewCoefficient += " ";
+                    }
+                    std::vector<std::string> rhsMultiplicationTerms = splitByMultiplication(term);
+                    if (rhsMultiplicationTerms.size() > 1) {
+                        int multHelper = 0;
+                        for (const auto& multiplicationTerm : rhsMultiplicationTerms) {
+                            if (multHelper != rhsMultiplicationTerms.size() - 1) {
+                                rhsNewCoefficient += "(* " + multiplicationTerm + " ";
+                                multHelper++;
+                            } else {
+                                rhsNewCoefficient += multiplicationTerm;
+                                if (multHelper != 0) {
+                                    for (int i = 0; i < multHelper; i++) {
+                                        rhsNewCoefficient += ")";
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        rhsNewCoefficient += rhsMultiplicationTerms[0];
+                    }
+                }
+
+                if (addHelper == rhsTerms.size() - 1) {
+                    for (int i = 0; i < addHelper; i++) {
+                        rhsNewCoefficient += ")";
+                    }
+                }
+
+                expression += "(= 0 " + rhsNewCoefficient + ")";
+                ++rhsIt;
+            }
+        }
+
+        expression += ")";
+    }
+
+    return expression;
+}
+
+std::string generateInequalities(const std::map<std::pair<int, bool>, std::string>& lhs, const std::map<std::pair<int, bool>, std::string>& rhs) {
+    std::vector<std::pair<int, std::string>> lhsWithX, lhsWithoutX, rhsWithX, rhsWithoutX;
+
+    for (const auto& pair : lhs) {
+        if (pair.first.second) {
+            lhsWithX.emplace_back(pair.first.first, pair.second);
         } else {
-            std::string inequality;
-
-            if (!degrees.second) {
-                inequality += "(>= ";
-            } else {
-                inequality += "(> ";
-            }
-
-
-            std::vector<std::string> lhsTerms = splitByAddition(lhsCoefficient);
-
-            int addHelper = 0;
-            for (const auto& term : lhsTerms) {
-                if (addHelper != lhsTerms.size() - 1) {
-                    inequality += "(+ ";
-                    addHelper++;
-                } else {
-                    inequality += " ";
-                }
-                std::vector<std::string> lhsMultiplicationTerms = splitByMultiplication(term);
-                if (lhsMultiplicationTerms.size() > 1) {
-                    int multHelper = 0;
-                    for (const auto& multiplicationTerm : lhsMultiplicationTerms) {
-                        if (multHelper != lhsMultiplicationTerms.size() - 1) {
-                            inequality += "(* " + multiplicationTerm + " ";
-                            multHelper++;
-                        } else {
-                            inequality += multiplicationTerm;
-                            for (int i = 0; i < multHelper; i++) {
-                                inequality += ")";
-                            }
-                        }
-                    }
-                } else {
-                    inequality += lhsMultiplicationTerms[0] + " ";
-                }
-
-            }
-
-            if (addHelper == lhsTerms.size() - 1) {
-                for (int i = 0; i < addHelper; i++) {
-                    inequality += ")";
-                }
-            }
-
-            inequality += " 0)";
-            result.emplace_back(inequality);
+            lhsWithoutX.emplace_back(pair.first.first, pair.second);
         }
     }
 
-    for (const auto & rhsPair : rhs) {
-        std::pair<int, bool> degrees = rhsPair.first;
-        std::string rhsCoefficient = rhsPair.second;
-
-        if (lhs.count(degrees) == 0) {
-            std::string inequality;
-
-            if (!degrees.second) {
-                inequality += "(<= ";
-            } else {
-                inequality += "(< ";
-            }
-
-
-            std::vector<std::string> rhsTerms = splitByAddition(rhsCoefficient);
-
-            int addHelper = 0;
-            for (const auto& term : rhsTerms) {
-                if (addHelper != rhsTerms.size() - 1) {
-                    inequality += "(+ ";
-                    addHelper++;
-                } else {
-                    inequality += " ";
-                }
-                std::vector<std::string> rhsMultiplicationTerms = splitByMultiplication(term);
-                if (rhsMultiplicationTerms.size() > 1) {
-                    int multHelper = 0;
-                    for (const auto& multiplicationTerm : rhsMultiplicationTerms) {
-                        if (multHelper != rhsMultiplicationTerms.size() - 1) {
-                            inequality += "(* " + multiplicationTerm + " ";
-                            multHelper++;
-                        } else {
-                            inequality += multiplicationTerm;
-                            for (int i = 0; i < multHelper; i++) {
-                                inequality += ")";
-                            }
-                        }
-                    }
-                } else {
-                    inequality += rhsMultiplicationTerms[0] + " ";
-                }
-
-            }
-
-            if (addHelper == rhsTerms.size() - 1) {
-                for (int i = 0; i < addHelper; i++) {
-                    inequality += ")";
-                }
-            }
-
-            inequality += " 0)";
-            result.emplace_back(inequality);
+    for (const auto& pair : rhs) {
+        if (pair.first.second) {
+            rhsWithX.emplace_back(pair.first.first, pair.second);
+        } else {
+            rhsWithoutX.emplace_back(pair.first.first, pair.second);
         }
     }
 
-    return result;
+    std::sort(lhsWithX.rbegin(), lhsWithX.rend());
+    std::sort(rhsWithX.rbegin(), rhsWithX.rend());
+    std::sort(lhsWithoutX.rbegin(), lhsWithoutX.rend());
+    std::sort(rhsWithoutX.rbegin(), rhsWithoutX.rend());
+
+    std::string expression = "(or (and " + generateLogicalExpression(lhsWithX, rhsWithX, ">") + generateLogicalExpression(lhsWithoutX, rhsWithoutX, ">=") + ") " +
+                             "(and " + generateLogicalExpression(lhsWithX, rhsWithX) + generateLogicalExpression(lhsWithoutX, rhsWithoutX, ">") + "))";
+
+    return expression;
 }
 
 #endif //FLT1_INEQUALITIESGENERATION_H

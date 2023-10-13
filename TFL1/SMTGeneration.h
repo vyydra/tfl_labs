@@ -55,11 +55,14 @@ void generateRequirements(std::ofstream& smtFile, std::vector<char>& symbols, co
         }
     }
 
-    std::vector<std::string> inequalities = generateInequalities(lhs, rhs);
+    /*std::vector<std::string> inequalities = generateInequalities(lhs, rhs);
 
     for (const auto& inequality : inequalities) {
         smtFile << "(assert " << inequality << ")" << std::endl;
-    }
+    }*/
+
+    std::string inequality = generateInequalities(lhs, rhs);
+    smtFile << "(assert " << inequality << ")" << std::endl;
 
 }
 

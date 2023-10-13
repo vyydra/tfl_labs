@@ -22,8 +22,13 @@ std::pair<Node*, Node*>* generateLinearFunctions(const std::string& lhs, const s
                                                                                       new OrdinalNode(Ordinal(true, "w")),
                                                                                       new OrdinalNode(Ordinal("c_" + s)))),
                                                   new OrdinalNode(Ordinal("d_" + s))));
-
-            linear_functions_lhs.emplace_back(func.root->clone());
+            if (lhs.length() == 1) {
+                auto f = func.simplify();
+                auto str = f->to_string();
+                linear_functions_lhs.emplace_back(f->root->clone());
+            } else {
+                linear_functions_lhs.emplace_back(func.root->clone());
+            }
         } else {
             LinearFunction func(new OperationNode("+",
                                                   new OperationNode("+",
@@ -64,7 +69,13 @@ std::pair<Node*, Node*>* generateLinearFunctions(const std::string& lhs, const s
                                                                                       new OrdinalNode(Ordinal("c_" + s)))),
                                                   new OrdinalNode(Ordinal("d_" + s))));
 
-            linear_functions_rhs.emplace_back(func.root->clone());
+            if (rhs.length() == 1) {
+                auto f = func.simplify();
+                auto str = f->to_string();
+                linear_functions_rhs.emplace_back(f->root->clone());
+            } else {
+                linear_functions_rhs.emplace_back(func.root->clone());
+            }
         } else {
             LinearFunction func(new OperationNode("+",
                                                   new OperationNode("+",
