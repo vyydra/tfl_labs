@@ -244,7 +244,7 @@ std::string generateLogicalExpression(const std::vector<std::pair<int, std::stri
                 }
 
                 if (lhs.size() > 1 && lhsIt != lhs.end() - 1) {
-                    expression += "(or (" + comparator + " " + lhsNewCoefficient + " 0) (and (" + comparator + " " + lhsNewCoefficient + " 0) ";
+                    expression += "(or (" + comparator + " " + lhsNewCoefficient + " 0) (and (= " + lhsNewCoefficient + " 0) ";
                     helper += 2;
                     ++lhsIt;
                 } else {
