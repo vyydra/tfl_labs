@@ -207,7 +207,7 @@ namespace regexp {
      * @param automaton the automaton to be converted.
      * @return the academic regular expression.
     */
-    std::string convertAutomatonToRegex(Automaton& automaton);
+    std::string convertAutomatonToRegex(Automaton automaton);
 
     /**
      * Converts a regular expression containing lookaheads to an academic regular expression.
@@ -215,7 +215,7 @@ namespace regexp {
      * @param source the source regular expression to be converted.
      * @return the academic regular expression.
     */
-    std::string convertToAcademicRegex(std::string& source);
+    std::string convertToAcademicRegex(std::string& source, Automaton* automaton);
 
     /**
      * Performs depth-first search from a start vertex to destination vertices.

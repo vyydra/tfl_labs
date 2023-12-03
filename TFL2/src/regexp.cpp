@@ -518,7 +518,7 @@ Automaton regexp::buildGlushkovAutomaton(std::string symbol) {
     return automaton;
 }
 
-std::string regexp::convertAutomatonToRegex(Automaton& automaton) {
+std::string regexp::convertAutomatonToRegex(Automaton automaton) {
     std::string regex = "";
 
     bool isEmpty = true;
@@ -704,7 +704,7 @@ std::string regexp::convertAutomatonToRegex(Automaton& automaton) {
     return regex;
 }
 
-std::string regexp::convertToAcademicRegex(std::string& source) {
+std::string regexp::convertToAcademicRegex(std::string& source, Automaton* automaton) {
     std::set<char> alphabet = getAlphabetOf(source);
     std::string expression = convertLookaheadsToIntersections(source);
     removeFrom(expression, "$");
@@ -751,9 +751,9 @@ std::string regexp::convertToAcademicRegex(std::string& source) {
         }
     }
 
-    Automaton automaton = stack.top();
+    *automaton = stack.top();
 
-    std::string academicRegex = convertAutomatonToRegex(automaton);
+    std::string academicRegex = convertAutomatonToRegex(*automaton);
 
     return academicRegex;
 }
