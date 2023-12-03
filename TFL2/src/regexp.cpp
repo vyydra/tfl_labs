@@ -751,7 +751,9 @@ std::string regexp::convertToAcademicRegex(std::string& source) {
         }
     }
 
-    std::string academicRegex = convertAutomatonToRegex(stack.top());
+    Automaton automaton = stack.top();
+
+    std::string academicRegex = convertAutomatonToRegex(automaton);
 
     return academicRegex;
 }

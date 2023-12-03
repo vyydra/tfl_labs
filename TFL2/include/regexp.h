@@ -53,6 +53,10 @@ namespace regexp {
             }
         }
 
+        std::vector<std::vector<T>>* getData() {
+            return &data;
+        }
+
         std::string toString() {
             std::stringstream ss;
             for (int i = 0; i < n; i++) {
