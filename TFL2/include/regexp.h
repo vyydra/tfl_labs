@@ -96,6 +96,10 @@ namespace regexp {
         static Automaton getKleeneClosure(Automaton& a);
 
         static Automaton getIntersection(Automaton& a1, Automaton& a2);
+
+        //std::vector<std::string> findPaths(Automaton& automaton, std::stack<int>& dfsStack);
+
+        /*void writeWordsToFile(const std::string& filename);*/
     };
 
     /**
@@ -227,4 +231,21 @@ namespace regexp {
      * @return whether at least one destination vertex has been visited.
     */
     bool dfs(Matrix<std::string>* transitionMatrix, Matrix<bool>* visitMatrix, int sVertex, std::vector<int>* dVertices);
+
+    /**
+    * Generates the given amount of words accepted by the given automaton.
+    * 
+    * @param automaton the automaton accepting generated words.
+    * @param quantity the number of words to be generated.
+    */
+    std::set<std::string> generateWords(Automaton& automaton, int quantity);
+
+    /**
+     * Checks if the given words match two given academic expressions.
+     * 
+     * @param words the given words.
+     * @param originalRegex the first regular expression (before conversion to an academic regular expression).
+     * @param academicRegex the second regular expression (after conversion to an academic regular expression).
+     */ 
+    void checkWordsMatch(const std::set<std::string>& words, const std::string& originalRegex, const std::string& academicRegex);
 }

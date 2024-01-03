@@ -6,6 +6,8 @@
 #include <vector>
 #include <set>
 #include <sstream>
+#include <fstream>
+#include <set>
 
 using namespace regexp;
 
@@ -781,4 +783,197 @@ bool regexp::dfs(Matrix<std::string>* transitionMatrix, Matrix<bool>* visitMatri
 		}
 	}
 	return false;
+}
+
+/*void Automaton::generateWords(int currentState, std::string currentWord, std::set<std::string>& words) {
+   if (this->getFinalStateMatrix()->get(currentState, 0) == 1) {
+       words.insert(currentWord);
+   }
+
+   for (int i = 0; i < this->getStatesNumber(); i++) {
+       std::string transition = this->getTransitionMatrix()->get(currentState, i);
+       if (transition != "0") {
+           generateWords(i, currentWord + transition, words);
+       }
+   }
+}
+
+void Automaton::writeWordsToFile(const std::string& filename) {
+   std::set<std::string> words;
+   generateWords(0, "", words);
+
+   std::ofstream file(filename);
+   if (!file) {
+       std::cerr << "Unable to open file " << filename << std::endl;
+       return;
+   }
+
+   for (const std::string& word : words) {
+       file << word << std::endl;
+   }
+
+   file.close();
+}*/
+
+/*std::vector<std::string> generateWords(Automaton& a) {
+   std::vector<std::string> words;
+   std::vector<int> visited(a.getStatesNumber(), 0);
+   std::stack<std::pair<int, std::string>> stack;
+
+   // Start from the initial state
+   stack.push({0, ""});
+
+   while (!stack.empty()) {
+       auto current = stack.top();
+       stack.pop();
+
+       // If the current state is final, add the generated word to the list
+       if (a.getFinalStateMatrix()->get(current.first, 0) == 1) {
+           words.push_back(current.second);
+       }
+
+       // For each transition from the current state
+       for (int i = 0; i < a.getStatesNumber(); i++) {
+           std::string transition = a.getTransitionMatrix()->get(current.first, i);
+
+           // If the transition is not empty and the next state has not been visited
+           if (transition != "0" && visited[i] == 0) {
+               visited[i] = 1;
+               stack.push({i, current.second + transition});
+           }
+       }
+   }
+
+   return words;
+}*/
+
+// Function to find all paths from the initial state to a final state
+/*std::vector<std::string> findPaths(Automaton& automaton, std::stack<int>& dfsStack) {
+   std::vector<std::string> paths;
+   while (!dfsStack.empty()) {
+       int currentState = dfsStack.top();
+       dfsStack.pop();
+
+       // Continue building the current path
+       std::vector<int> path;
+       path.push_back(currentState);
+
+       // Check if the current state is a final state
+       if (automaton.getFinalStateMatrix()->get(currentState, 0) == 1) {
+           // Convert the path to a string and add it to the list of paths
+           std::string pathStr;
+           for (const auto& state : path) {
+               pathStr += automaton.getTransitionMatrix()->get(state, 0);
+           }
+           paths.push_back(pathStr);
+       } else {
+           // Push its neighboring states onto the stack
+           for (int i = 0; i < automaton.getTransitionMatrix()->getN(); ++i) {
+               if (automaton.getTransitionMatrix()->get(currentState, i) != "0") {
+                  dfsStack.push(i);
+               }
+           }
+       }
+   }
+   return paths;
+}
+
+
+std::vector<std::string> generateWords(Automaton& automaton, int quantity) {
+  // Initialize DFS stack with the initial state
+  std::stack<int> dfsStack;
+  dfsStack.push(0);
+
+  // Vector to store the generated words
+  std::vector<std::string> generatedWords;
+
+  // Run DFS
+  for (int i = 0; i < quantity; ++i) {
+      // Find all paths from the initial state to a final state
+      std::vector<std::string> paths = findPaths(automaton, dfsStack);
+
+      // Add the generated words to the vector
+      for (const auto& path : paths) {
+          generatedWords.push_back(path);
+      }
+  }
+
+  // Return the vector of generated words
+  return generatedWords;
+}*/
+
+void generateWordsHelper(Automaton& automaton, std::vector<int>& visitedStates, std::vector<int>& parent, std::string& currentWord, std::set<std::string>& words, int currentState, int quantity) {
+    if (words.size() >= quantity) {
+        return;
+    }
+
+    visitedStates[currentState] = 1;
+
+    if (parent[currentState] != -1) {
+        currentWord += automaton.getTransitionMatrix()->get(parent[currentState], currentState);
+    }
+
+
+    if (automaton.getFinalStateMatrix()->get(currentState, 0) == 1) {
+        words.insert(currentWord);
+    }
+
+    for (int i = 0; i < automaton.getStatesNumber(); i++) {
+        if (i != currentState && automaton.getTransitionMatrix()->get(currentState, i) != "0" && visitedStates[i] == 0) {
+            parent[i] = currentState;
+            std::string tempWord = currentWord;
+            generateWordsHelper(automaton, visitedStates, parent, tempWord, words, i, quantity);
+            parent[i] = -1;
+        }
+    }
+
+
+    if (automaton.getTransitionMatrix()->get(currentState, currentState) != "0") {
+        currentWord += automaton.getTransitionMatrix()->get(currentState, currentState);
+
+        for (int i = 0; i < automaton.getStatesNumber(); i++) {
+            if (i != currentState && automaton.getTransitionMatrix()->get(currentState, i) != "0") {
+                parent[i] = currentState;
+                std::string tempWord = currentWord;
+                generateWordsHelper(automaton, visitedStates, parent, tempWord, words, i, quantity);
+                parent[i] = -1;
+            }
+        }
+    }
+
+    visitedStates[currentState] = 0;
+}
+
+std::set<std::string> regexp::generateWords(Automaton& automaton, int quantity) {
+    std::set<std::string> words;
+    std::vector<int> visitedStates(automaton.getStatesNumber(), 0);
+    std::vector<int> parent(automaton.getStatesNumber(), -1);
+    
+    int startState = 0;
+    parent[startState] = -1;
+    std::string currentWord = "";
+    generateWordsHelper(automaton, visitedStates, parent, currentWord, words, startState, quantity);
+
+    return words;
+}
+
+void regexp::checkWordsMatch(const std::set<std::string>& words, const std::string& originalRegex, const std::string& academicRegex) {
+    std::regex originalPattern(originalRegex);
+    std::regex academicPattern(academicRegex);
+
+    for (const auto& word : words) {
+        bool matchesOriginal = std::regex_match(word, originalPattern);
+        bool matchesAcademic = std::regex_match(word, academicPattern);
+
+        if (!matchesOriginal || !matchesAcademic) {
+            std::cout << "Word '" << word << "' does not match ";
+            if (!matchesOriginal) {
+                std::cout << "the original expression; ";
+            }
+            if (!matchesAcademic) {
+                std::cout << "the academic expression;";
+            }
+            std::cout << std::endl;
+        }
+    }
 }
