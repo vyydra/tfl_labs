@@ -389,28 +389,40 @@ std::set<char> regexp::getAlphabetOf(std::string source) {
 }
 
 std::string regexp::convertLookaheadsToIntersections(std::string& source, int start, int end) {
+
+    if (start > end) {
+        return "";
+    }
+
+    int n = 0;
+    
+    for (int i = start; i <= end; i++) {
+        if (source[i] == '(') {
+            n++;
+        } else if (source[i] == ')') {
+            n--;
+        } else if (n == 0 && source[i] == '|') {
+            return "(" + convertLookaheadsToIntersections(source, start, i - 1) + "|" + convertLookaheadsToIntersections(source, i + 1, end) + ")";
+        }
+    }
+
     std::string result = "(";
     std::string r2 = "";
-    int n = 1;
+    n = 1;
     int i = start;
     bool existEndSymbol = false;
     while (i <= end) {
         if (i <= end - 2 && source[i + 1] == '?' && source[i + 2] == '=') {
-            result += source[i];
             i += 3;
             int j = i;
-            while (n > 0)
-            {
-                if (source[j] == '(')
-                {
+            while (n > 0) {
+                if (source[j] == '(') {
                     n++;
                 }
-                else if (source[j] == ')')
-                {
+                else if (source[j] == ')') {
                     n--;
                 }
-                if (n == 0 && source[j - 1] == '$')
-                {
+                if (n == 0 && source[j - 1] == '$') {
                     existEndSymbol = true;
                 } 
                 j++;
@@ -419,22 +431,19 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
             i = j;
             break;
         }
-        else
-        {
-            result += source[i];
-        }
 
+        result += source[i];
         i++;
     }
 
-    if (!r2.empty())
-    {
-        result += r2;
-        if (!existEndSymbol)
-        {
+    if (!r2.empty()) {
+        result += "(" + r2;
+        if (!existEndSymbol) {
             result += ".*";
         }
+
         result += "&" + convertLookaheadsToIntersections(source, i, end) + ")";
+        
     }
 
     result += ")";
@@ -443,7 +452,7 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
 }
 
 std::string regexp::convertLookaheadsToIntersections(std::string& source) {
-    return convertLookaheadsToIntersections(source, 1, source.length() - 1);
+    return convertLookaheadsToIntersections(source, 0, source.length() - 1);
 }
 
 void regexp::removeFrom(std::string& source, std::string const& toRemove) {
@@ -546,7 +555,7 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                 continue;
             }
             std::string data2 = automaton.getTransitionMatrix()->get(i, j);
-            if (data2 != "0") {
+            if (data1 != "0" && data2 != "0") {
                 std::string data4 = "";
                 if (automaton.getTransitionMatrix()->get(0, j) != "0") {
                     data4 = "(" + automaton.getTransitionMatrix()->get(0, j) + ")|(";
@@ -708,7 +717,9 @@ std::string regexp::convertToAcademicRegex(std::string& source, Automaton* autom
     std::set<char> alphabet = getAlphabetOf(source);
     std::string expression = convertLookaheadsToIntersections(source);
     removeFrom(expression, "$");
+    removeFrom(expression, "^");
     replaceDots(expression, alphabet);
+    //std::cout << "expr: " << expression << std::endl;
     Lexer lexer;
     std::vector<Lexer::Token> infix_tokens = lexer.tokenize(expression, alphabet);
     std::vector<Lexer::Token> postfix_tokens = convertToPostfixForm(infix_tokens);
