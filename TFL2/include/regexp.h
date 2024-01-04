@@ -241,11 +241,21 @@ namespace regexp {
     std::set<std::string> generateWords(Automaton& automaton, int quantity);
 
     /**
-     * Checks if the given words match two given academic expressions.
+     * Generates random regular expression.
      * 
-     * @param words the given words.
-     * @param originalRegex the first regular expression (before conversion to an academic regular expression).
-     * @param academicRegex the second regular expression (after conversion to an academic regular expression).
-     */ 
-    void checkWordsMatch(const std::set<std::string>& words, const std::string& originalRegex, const std::string& academicRegex);
+     * @param depth the depth of regular expression.
+     * @param currentStarHeight the current star height of regular expression.
+     * @param currentNumLookaheads the current lookaheads amount in regular expression.
+     * @param nestedLookahead the presence of nested lookaheads in regular expression.
+    */
+    std::string generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead);
+
+    /**
+     * Tests regular expressions (generated random one and academic version of it) and words for matches.
+     * 
+     * @param outputFileName the name of the output file.
+     * @param numExpressions the amount of regular expressions to be tested.
+     * @param numWords the amount of words to be tested for each regular expressions pair.
+    */
+    void testRegularExpressions(const std::string& outputFileName, int numExpressions, int numWords);
 }
