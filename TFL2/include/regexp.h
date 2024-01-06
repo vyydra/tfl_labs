@@ -238,7 +238,7 @@ namespace regexp {
     * @param automaton the automaton accepting generated words.
     * @param quantity the number of words to be generated.
     */
-    std::set<std::string> generateWords(Automaton& automaton, int quantity);
+    std::vector<std::string> generateWords(Automaton& automaton, int quantity);
 
     /**
      * Generates random regular expression.
@@ -247,8 +247,14 @@ namespace regexp {
      * @param currentStarHeight the current star height of regular expression.
      * @param currentNumLookaheads the current lookaheads amount in regular expression.
      * @param nestedLookahead the presence of nested lookaheads in regular expression.
+     * @param lookaheadInAlternative the presence of lookaheads inside alternative operation.
     */
-    std::string generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead);
+    std::string generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative);
+
+    /**
+     * Generates random regular expression.
+    */
+    std::string generateRandomRegex();
 
     /**
      * Tests regular expressions (generated random one and academic version of it) and words for matches.

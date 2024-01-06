@@ -9,11 +9,12 @@
 #include <fstream>
 #include <random>
 #include <chrono>
+#include <boost/regex.hpp>
 
 using namespace regexp;
 
 #define ALPHABET_SIZE 5
-#define MAX_LETTERS 5
+#define MAX_LETTERS 10
 #define STAR_HEIGHT 3
 #define NUM_LOOKAHEADS 2
 
@@ -397,28 +398,40 @@ std::set<char> regexp::getAlphabetOf(std::string source) {
 }
 
 std::string regexp::convertLookaheadsToIntersections(std::string& source, int start, int end) {
+
+    if (start > end) {
+        return "";
+    }
+
+    int n = 0;
+    
+    for (int i = start; i <= end; i++) {
+        if (source[i] == '(') {
+            n++;
+        } else if (source[i] == ')') {
+            n--;
+        } else if (n == 0 && source[i] == '|') {
+            return "(" + convertLookaheadsToIntersections(source, start, i - 1) + "|" + convertLookaheadsToIntersections(source, i + 1, end) + ")";
+        }
+    }
+
     std::string result = "(";
     std::string r2 = "";
-    int n = 1;
+    n = 1;
     int i = start;
     bool existEndSymbol = false;
     while (i <= end) {
         if (i <= end - 2 && source[i + 1] == '?' && source[i + 2] == '=') {
-            result += source[i];
             i += 3;
             int j = i;
-            while (n > 0)
-            {
-                if (source[j] == '(')
-                {
+            while (n > 0) {
+                if (source[j] == '(') {
                     n++;
                 }
-                else if (source[j] == ')')
-                {
+                else if (source[j] == ')') {
                     n--;
                 }
-                if (n == 0 && source[j - 1] == '$')
-                {
+                if (n == 0 && source[j - 1] == '$') {
                     existEndSymbol = true;
                 } 
                 j++;
@@ -427,22 +440,19 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
             i = j;
             break;
         }
-        else
-        {
-            result += source[i];
-        }
 
+        result += source[i];
         i++;
     }
 
-    if (!r2.empty())
-    {
-        result += r2;
-        if (!existEndSymbol)
-        {
+    if (!r2.empty()) {
+        result += "(" + r2;
+        if (!existEndSymbol) {
             result += ".*";
         }
+
         result += "&" + convertLookaheadsToIntersections(source, i, end) + ")";
+        
     }
 
     result += ")";
@@ -451,7 +461,7 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
 }
 
 std::string regexp::convertLookaheadsToIntersections(std::string& source) {
-    return convertLookaheadsToIntersections(source, 1, source.length() - 1);
+    return convertLookaheadsToIntersections(source, 0, source.length() - 1);
 }
 
 void regexp::removeFrom(std::string& source, std::string const& toRemove) {
@@ -554,7 +564,7 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                 continue;
             }
             std::string data2 = automaton.getTransitionMatrix()->get(i, j);
-            if (data2 != "0") {
+            if (data1 != "0" && data2 != "0") {
                 std::string data4 = "";
                 if (automaton.getTransitionMatrix()->get(0, j) != "0") {
                     data4 = "(" + automaton.getTransitionMatrix()->get(0, j) + ")|(";
@@ -716,7 +726,9 @@ std::string regexp::convertToAcademicRegex(std::string& source, Automaton* autom
     std::set<char> alphabet = getAlphabetOf(source);
     std::string expression = convertLookaheadsToIntersections(source);
     removeFrom(expression, "$");
+    removeFrom(expression, "^");
     replaceDots(expression, alphabet);
+    //std::cout << "expr: " << expression << std::endl;
     Lexer lexer;
     std::vector<Lexer::Token> infix_tokens = lexer.tokenize(expression, alphabet);
     std::vector<Lexer::Token> postfix_tokens = convertToPostfixForm(infix_tokens);
@@ -791,44 +803,40 @@ bool regexp::dfs(Matrix<std::string>* transitionMatrix, Matrix<bool>* visitMatri
 	return false;
 }
 
-void generateWordsHelper(Automaton& automaton, std::string currentWord, std::set<std::string>& words, int currentState, int depthLimit, bool& selfTransition, std::vector<int>& visited, int quantity, int& maxDepthLimit) {
-    if (automaton.getFinalStateMatrix()->get(currentState, 0) == 1) {
-        words.insert(currentWord);
-    }
-    
-    if (words.size() >= quantity || depthLimit == 0 || maxDepthLimit == 0) {
+void generateWordsHelper(Automaton& automaton, std::string currentWord, std::vector<std::string>& words, int currentState, std::vector<int>& visited, int quantity, int limit) {
+    if (words.size() >= quantity || visited[currentState] >= limit) {
         return;
     }
 
+    if (automaton.getFinalStateMatrix()->get(currentState, 0) == 1) {
+        words.push_back(currentWord);
+    }
+
+    std::vector<int> possibleNextStates;
     for (int i = 0; i < automaton.getStatesNumber(); i++) {
-        if (maxDepthLimit == 0) {
-            return;
-        }
         if (automaton.getTransitionMatrix()->get(currentState, i) != "0") {
-            std::string nextWord = currentWord + automaton.getTransitionMatrix()->get(currentState, i);
-            if (visited[currentState]) {
-                selfTransition = true;
-                visited[currentState] = 1;
-                maxDepthLimit--;
-                generateWordsHelper(automaton, nextWord, words, i, depthLimit - 1, selfTransition, visited, quantity, maxDepthLimit);
-            }
-            else {
-                visited[currentState] = 1;
-                generateWordsHelper(automaton, nextWord, words, i, depthLimit, selfTransition, visited, quantity, maxDepthLimit);
-                visited[currentState] = 0;
-            }
+            possibleNextStates.push_back(i);
         }
     }
 
-    visited[currentState] = 0;
+    if (!possibleNextStates.empty()) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> distrib(0, possibleNextStates.size() - 1);
+        int randomIndex = distrib(gen);
+        int nextState = possibleNextStates[randomIndex];
+
+        std::string nextWord = currentWord + automaton.getTransitionMatrix()->get(currentState, nextState);
+        visited[currentState]++;
+        generateWordsHelper(automaton, nextWord, words, nextState, visited, quantity, limit);
+        visited[currentState]--;
+    } else {
+        return;
+    }
 }
 
-std::set<std::string> regexp::generateWords(Automaton& automaton, int quantity) {
-    std::set<std::string> words;
-    bool selfTransition = false;
-    
-    int startState = 0;
-    int depthLimit = 1;
+std::vector<std::string> regexp::generateWords(Automaton& automaton, int quantity) {
+    std::vector<std::string> words;
 
     std::vector<std::vector<int>> data = *(automaton.getFinalStateMatrix()->getData());
     bool allZero = true;
@@ -843,17 +851,12 @@ std::set<std::string> regexp::generateWords(Automaton& automaton, int quantity) 
         return words;
     }
 
+    int startState = 0;
+    std::vector<int> visited(automaton.getStatesNumber(), 0);
+
     while (words.size() < quantity) {
         std::string s = "";
-        std::vector<int> visited(automaton.getStatesNumber(), 0);
-        int maxDepthLimit = 150;
-        generateWordsHelper(automaton, s, words, startState, depthLimit, selfTransition, visited, quantity, maxDepthLimit);
-        if (selfTransition && maxDepthLimit <= 0) {
-            depthLimit++;
-        }
-        else {
-            break;
-        }
+        generateWordsHelper(automaton, s, words, startState, visited, quantity, 5);
     }
 
     return words;
@@ -867,29 +870,51 @@ char generateRandomLetter() {
     return alphabet[dist(engine)];
 }
 
-std::string generateRandomUnary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead) {
+std::string generateRandomUnary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
+    if (lookaheadInAlternative || depth - 1 <= 0) {
+        return "";
+    }
+
+    std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    
+    if (regex == "") {
+        return regex;
+    }
+    
     if (currentStarHeight >= STAR_HEIGHT) {
         std::string letter;
         letter += generateRandomLetter();
         return letter;
     }
+
+    if (regex.find("(?=") != std::string::npos) {
+        return "";
+    }
     currentStarHeight++;
-    return "(" + generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead) + ")*";
+
+    return "(" + regex + ")*";
 }
 
-std::string generateRandomLookahead(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead) {
-    if (currentNumLookaheads >= NUM_LOOKAHEADS) {
+std::string generateRandomLookahead(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
+    if (lookaheadInAlternative) {
+        return "";
+    }
+
+    std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    
+    if (currentNumLookaheads >= NUM_LOOKAHEADS || regex == "") {
         std::string letter;
         letter += generateRandomLetter();
         return letter;
     }
+
     currentNumLookaheads++;
 
     static std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count());
     std::uniform_int_distribution<int> distBool(0, 1);
     bool appendDollarSign = distBool(engine);
 
-    std::string lookahead = "(?=" + generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead);
+    std::string lookahead = "(?=" + regex;
 
     if (appendDollarSign) {
         lookahead += "$)";
@@ -898,29 +923,50 @@ std::string generateRandomLookahead(int depth, int& currentStarHeight, int& curr
         lookahead += ")";
     }
 
-    return lookahead;
+    if (depth - 1 > 0) {
+        std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+        if (regex == "") {
+            return lookahead + generateRandomLetter();
+        } else {
+            return lookahead + regex;
+        }
+    } else {
+        return lookahead + generateRandomLetter();
+    }
 }
 
-std::string generateRandomBinary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead) {
+std::string generateRandomBinary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
+    if (lookaheadInAlternative || depth - 1 <= 0) {
+        return "";
+    }
+    
     if (depth <= 0) {
         std::string letter;
         letter += generateRandomLetter();
         return letter;
     }
 
-    std::string left = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead);
-    std::string right = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead);
-    if (!left.empty() && !right.empty()) {
-        return "(" + left + "|" + right + ")";
+    std::string left = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);;
+    std::string right = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);;
+
+    if (left == "" || right == "") {
+        return "";
     }
-    return "";
+
+    if (left.find("(?=") != std::string::npos || right.find("(?=") != std::string::npos) {
+        lookaheadInAlternative = true;
+    }
+    
+    return "(" + left + "|" + right + ")";
 }
 
-std::string regexp::generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead) {
+std::string regexp::generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
     if (depth <= 0) {
-        std::string letter;
-        letter += generateRandomLetter();
-        return letter;
+        return "";
+    }
+
+    if (lookaheadInAlternative) {
+        return generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
     }
 
     std::string regex;
@@ -929,80 +975,103 @@ std::string regexp::generateRandomRegex(int depth, int& currentStarHeight, int& 
     int choice = dist(engine);
 
     if (choice < 25) {
-        regex = generateRandomUnary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead);
+        regex = generateRandomUnary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
     }
     else if (choice < 50 && !nestedLookahead) {
         nestedLookahead = true;
-        regex = generateRandomLookahead(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead);
+        regex = generateRandomLookahead(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
     }
     else if (choice < 75) {
-        regex = generateRandomBinary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead);
+        regex = generateRandomBinary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
     }
     else {
         regex = generateRandomLetter();
     }
 
-    return regex + generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead);
+    return regex + generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
 }
 
 std::string regexp::generateRandomRegex() {
     int currentStarHeight = 0;
     int currentNumLookaheads = 0;
     bool nestedLookahead = false;
-    int depth = MAX_LETTERS;
-    std::string regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead);
+    bool lookaheadInAlternative = false;
+    std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<int> dist(1, MAX_LETTERS);
+    int depth = dist(engine);
+    std::string regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    while (regex == "") {
+        currentStarHeight = 0;
+        currentNumLookaheads = 0;
+        nestedLookahead = false;
+        lookaheadInAlternative = false;
+        depth = dist(engine);
+        regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    }
+
     return "^" + regex + "$";
 }
 
 void regexp::testRegularExpressions(const std::string& outputFileName, int numExpressions, int numWords) {
     std::ofstream outFile(outputFileName);
-    if (!outFile)
-    {
+    if (!outFile) {
         std::cerr << "Cannot open the output file." << std::endl;
         return;
     }
     for (int i = 0; i < numExpressions; ++i) {
         std::string originalRegex = generateRandomRegex();
-        std::cout << originalRegex << std::endl;
 
         Automaton automaton(1);
         std::string academicRegex = convertToAcademicRegex(originalRegex, &automaton);
 
-        std::set<std::string> words = generateWords(automaton, numWords);
+        std::vector<std::string> words = generateWords(automaton, numWords);
 
-        std::vector<std::string> mismatchesOriginal, mismatchesAcademic;
-        std::regex originalPattern(originalRegex);
-        std::regex academicPattern(academicRegex);
+        std::set<std::string> mismatchesOriginal, mismatchesAcademic, complexWords;
+        boost::regex originalPattern(originalRegex);
+        boost::regex academicPattern(academicRegex);
 
         for (const auto& word : words) {
-            if (!std::regex_match(word, originalPattern)) {
-                mismatchesOriginal.push_back(word);
+            try {
+                if (!boost::regex_match(word, originalPattern)) {
+                    mismatchesOriginal.insert(word);
+                }
+            } catch (const boost::regex_error& e) {
+                std::cerr << "Error matching word '" << word << "' against original pattern: " << e.what() << std::endl;
+                complexWords.insert(word);
             }
-            if (!std::regex_match(word, academicPattern)) {
-                mismatchesAcademic.push_back(word);
+
+            try {
+                if (!boost::regex_match(word, academicPattern)) {
+                    mismatchesAcademic.insert(word);
+                }
+            } catch (const boost::regex_error& e) {
+                    std::cerr << "Error matching word '" << word << "' against academic pattern: " << e.what() << std::endl;
+                    complexWords.insert(word);
             }
         }
 
         outFile << "Original regex: " << originalRegex << "\n";
         outFile << "Academic regex: " << academicRegex << "\n";
         outFile << "Words generated: " << words.size() << "\n";
-        if (!mismatchesOriginal.empty()) {
+        outFile << "Words too complex to try matching with regexes: " << complexWords.size() << "\n";
+        if (!mismatchesOriginal.empty() && !words.empty()) {
             outFile << "Words that do not match the original regex:\n";
             for (const auto& word : mismatchesOriginal) {
                 outFile << word << "\n";
             }
-        }
-        else {
+        } else if (!words.empty()) {
             outFile << "All words match the original regex.\n";
         }
-        if (!mismatchesAcademic.empty()) {
+        if (!mismatchesAcademic.empty() && !words.empty()) {
             outFile << "Words that do not match the academic regex:\n";
             for (const auto& word : mismatchesAcademic) {
                 outFile << word << "\n";
             }
-        }
-        else {
+        } else if (!words.empty()) {
             outFile << "All words match the academic regex.\n";
+        }
+        if (words.empty()) {
+            outFile << "No words were generated.\n";
         }
         outFile << "-----------------------------\n";
     }
