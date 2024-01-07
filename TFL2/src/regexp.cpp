@@ -549,7 +549,7 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
         std::string data1 = automaton.getTransitionMatrix()->get(0, i);
         automaton.getTransitionMatrix()->set(0, i, "0");
         std::string data3 = automaton.getTransitionMatrix()->get(i, i);
-        automaton.getTransitionMatrix()->set(i, i, "0"); //last update
+        automaton.getTransitionMatrix()->set(i, i, "0");
         for (int j = 0; j < automaton.getStatesNumber(); j++) {
             if (j == i) {
                 continue;
@@ -558,17 +558,17 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
             if (data1 != "0" && data2 != "0") {
                 std::string data4 = "";
                 if (automaton.getTransitionMatrix()->get(0, j) != "0") {
-                    data4 = "(" + automaton.getTransitionMatrix()->get(0, j) + ")|(";
+                    data4 = "((" + automaton.getTransitionMatrix()->get(0, j) + ")|(";
                 }
                 if (data3 != "0") {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + "(" + data3 + ")*" + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + "(" + data3 + ")*" + data2 + "))");
                     } else {
                         automaton.getTransitionMatrix()->set(0, j, data1 + "(" + data3 + ")*" + data2);
                     }
                 } else {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + data2 + "))");
                     } else {
                         automaton.getTransitionMatrix()->set(0, j, data1 + data2);
                     }
@@ -586,13 +586,13 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                         std::string data7 = automaton.getTransitionMatrix()->get(j, k);
                         if (data3 != "0") {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")|(" + data5 + "(" + data3 + ")*" + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")|(" + data5 + "(" + data3 + ")*" + data6 + "))");
                             } else {
                                 automaton.getTransitionMatrix()->set(j, k, data5 + "(" + data3 + ")*" + data6);
                             }
                         } else {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")|(" + data5 + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")|(" + data5 + data6 + "))");
                             } else {
                                 automaton.getTransitionMatrix()->set(j, k, data5 + data6);
                             }
@@ -640,19 +640,19 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
             if (data2 != "0") {
                 std::string data4 = "";
                 if (automaton.getTransitionMatrix()->get(0, j) != "0") {
-                    data4 = "(" + automaton.getTransitionMatrix()->get(0, j) + ")";
+                    data4 = "((" + automaton.getTransitionMatrix()->get(0, j) + ")";
                 }
                 if (data3 != "0") {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + "))");
                     } else {
-                        automaton.getTransitionMatrix()->set(0, j, "(" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, "((" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + "))");
                     }
                 } else {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + data2 + "))");
                     } else {
-                        automaton.getTransitionMatrix()->set(0, j, "(" + data1 + ")" + "|" + "(" + data1 + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, "((" + data1 + ")" + "|" + "(" + data1 + data2 + "))");
                     }
                 }
             }
@@ -668,15 +668,15 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                         std::string data7 = automaton.getTransitionMatrix()->get(j, k);
                         if (data3 != "0") {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + "))");
                             } else {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + "))");
                             }
                         } else {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + data6 + "))");
                             } else {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data5 + ")" + "|" + "(" + data5 + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data5 + ")" + "|" + "(" + data5 + data6 + "))");
                             }
                         }
                     }
@@ -703,9 +703,9 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                 regex += "|";
             }
             if (automaton.getTransitionMatrix()->get(i, i) != "0") {
-                regex += "(" + automaton.getTransitionMatrix()->get(0, i) + "(" + automaton.getTransitionMatrix()->get(i, i) + ")*" + ")";
+                regex += automaton.getTransitionMatrix()->get(0, i) + "(" + automaton.getTransitionMatrix()->get(i, i) + ")*";
             } else {
-                regex += "(" + automaton.getTransitionMatrix()->get(0, i) + ")";
+                regex += automaton.getTransitionMatrix()->get(0, i);
             }
         }
     }
@@ -719,19 +719,18 @@ std::string regexp::convertToAcademicRegex(std::string& source, Automaton* autom
     removeFrom(expression, "$");
     removeFrom(expression, "^");
     replaceDots(expression, alphabet);
-    //std::cout << "expr: " << expression << std::endl;
     Lexer lexer;
-    std::vector<Lexer::Token> infix_tokens = lexer.tokenize(expression, alphabet);
-    std::vector<Lexer::Token> postfix_tokens = convertToPostfixForm(infix_tokens);
+    std::vector<Lexer::Token> infixTokens = lexer.tokenize(expression, alphabet);
+    std::vector<Lexer::Token> postfixTokens = convertToPostfixForm(infixTokens);
 
     std::stack<Automaton> stack;
     Automaton a(1);
     Automaton b(1);
 
-    for (int i = 0; i < postfix_tokens.size(); i++) {
-        switch (postfix_tokens[i].getType()) {
+    for (int i = 0; i < postfixTokens.size(); i++) {
+        switch (postfixTokens[i].getType()) {
             case Lexer::Token::kLetter:
-                stack.push(buildGlushkovAutomaton(postfix_tokens[i].getData()));
+                stack.push(buildGlushkovAutomaton(postfixTokens[i].getData()));
                 break;
             case Lexer::Token::kKleeneStar:
                 a = stack.top();
