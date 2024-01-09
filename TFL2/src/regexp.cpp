@@ -558,7 +558,7 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
         std::string data1 = automaton.getTransitionMatrix()->get(0, i);
         automaton.getTransitionMatrix()->set(0, i, "0");
         std::string data3 = automaton.getTransitionMatrix()->get(i, i);
-        automaton.getTransitionMatrix()->set(i, i, "0"); //last update
+        automaton.getTransitionMatrix()->set(i, i, "0");
         for (int j = 0; j < automaton.getStatesNumber(); j++) {
             if (j == i) {
                 continue;
@@ -567,17 +567,17 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
             if (data1 != "0" && data2 != "0") {
                 std::string data4 = "";
                 if (automaton.getTransitionMatrix()->get(0, j) != "0") {
-                    data4 = "(" + automaton.getTransitionMatrix()->get(0, j) + ")|(";
+                    data4 = "((" + automaton.getTransitionMatrix()->get(0, j) + ")|(";
                 }
                 if (data3 != "0") {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + "(" + data3 + ")*" + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + "(" + data3 + ")*" + data2 + "))");
                     } else {
                         automaton.getTransitionMatrix()->set(0, j, data1 + "(" + data3 + ")*" + data2);
                     }
                 } else {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + data1 + data2 + "))");
                     } else {
                         automaton.getTransitionMatrix()->set(0, j, data1 + data2);
                     }
@@ -595,13 +595,13 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                         std::string data7 = automaton.getTransitionMatrix()->get(j, k);
                         if (data3 != "0") {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")|(" + data5 + "(" + data3 + ")*" + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")|(" + data5 + "(" + data3 + ")*" + data6 + "))");
                             } else {
                                 automaton.getTransitionMatrix()->set(j, k, data5 + "(" + data3 + ")*" + data6);
                             }
                         } else {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")|(" + data5 + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")|(" + data5 + data6 + "))");
                             } else {
                                 automaton.getTransitionMatrix()->set(j, k, data5 + data6);
                             }
@@ -649,19 +649,19 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
             if (data2 != "0") {
                 std::string data4 = "";
                 if (automaton.getTransitionMatrix()->get(0, j) != "0") {
-                    data4 = "(" + automaton.getTransitionMatrix()->get(0, j) + ")";
+                    data4 = "((" + automaton.getTransitionMatrix()->get(0, j) + ")";
                 }
                 if (data3 != "0") {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + "))");
                     } else {
-                        automaton.getTransitionMatrix()->set(0, j, "(" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, "((" + data1 + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + ")" + "|" + "(" + data1 + "(" + data3 + ")*" + data2 + "))");
                     }
                 } else {
                     if (data4 != "") {
-                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, data4 + "|" + "(" + data1 + ")" + "|" + "(" + data1 + data2 + "))");
                     } else {
-                        automaton.getTransitionMatrix()->set(0, j, "(" + data1 + ")" + "|" + "(" + data1 + data2 + ")");
+                        automaton.getTransitionMatrix()->set(0, j, "((" + data1 + ")" + "|" + "(" + data1 + data2 + "))");
                     }
                 }
             }
@@ -677,15 +677,15 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                         std::string data7 = automaton.getTransitionMatrix()->get(j, k);
                         if (data3 != "0") {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + "))");
                             } else {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data5 + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + ")" + "|" + "(" + data5 + "(" + data3 + ")*" + data6 + "))");
                             }
                         } else {
                             if (data7 != "0") {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data7 + ")" + "|" + "(" + data5 + ")" + "|" + "(" + data5 + data6 + "))");
                             } else {
-                                automaton.getTransitionMatrix()->set(j, k, "(" + data5 + ")" + "|" + "(" + data5 + data6 + ")");
+                                automaton.getTransitionMatrix()->set(j, k, "((" + data5 + ")" + "|" + "(" + data5 + data6 + "))");
                             }
                         }
                     }
@@ -712,9 +712,9 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
                 regex += "|";
             }
             if (automaton.getTransitionMatrix()->get(i, i) != "0") {
-                regex += "(" + automaton.getTransitionMatrix()->get(0, i) + "(" + automaton.getTransitionMatrix()->get(i, i) + ")*" + ")";
+                regex += automaton.getTransitionMatrix()->get(0, i) + "(" + automaton.getTransitionMatrix()->get(i, i) + ")*";
             } else {
-                regex += "(" + automaton.getTransitionMatrix()->get(0, i) + ")";
+                regex += automaton.getTransitionMatrix()->get(0, i);
             }
         }
     }
@@ -728,19 +728,18 @@ std::string regexp::convertToAcademicRegex(std::string& source, Automaton* autom
     removeFrom(expression, "$");
     removeFrom(expression, "^");
     replaceDots(expression, alphabet);
-    //std::cout << "expr: " << expression << std::endl;
     Lexer lexer;
-    std::vector<Lexer::Token> infix_tokens = lexer.tokenize(expression, alphabet);
-    std::vector<Lexer::Token> postfix_tokens = convertToPostfixForm(infix_tokens);
+    std::vector<Lexer::Token> infixTokens = lexer.tokenize(expression, alphabet);
+    std::vector<Lexer::Token> postfixTokens = convertToPostfixForm(infixTokens);
 
     std::stack<Automaton> stack;
     Automaton a(1);
     Automaton b(1);
 
-    for (int i = 0; i < postfix_tokens.size(); i++) {
-        switch (postfix_tokens[i].getType()) {
+    for (int i = 0; i < postfixTokens.size(); i++) {
+        switch (postfixTokens[i].getType()) {
             case Lexer::Token::kLetter:
-                stack.push(buildGlushkovAutomaton(postfix_tokens[i].getData()));
+                stack.push(buildGlushkovAutomaton(postfixTokens[i].getData()));
                 break;
             case Lexer::Token::kKleeneStar:
                 a = stack.top();
@@ -826,7 +825,35 @@ void generateWordsHelper(Automaton& automaton, std::string currentWord, std::vec
         int randomIndex = distrib(gen);
         int nextState = possibleNextStates[randomIndex];
 
-        std::string nextWord = currentWord + automaton.getTransitionMatrix()->get(currentState, nextState);
+        std::string transition = automaton.getTransitionMatrix()->get(currentState, nextState);
+        std::set<std::string> symbols;
+        std::string temp;
+        
+        for (char c : transition) {
+            if (c == '(' || c == ')' || c == '|') {
+                if (!temp.empty()) {
+                    symbols.insert(temp);
+                    temp.clear();
+                }
+            }
+            else {
+                temp += c;
+            }
+        }
+        if (!temp.empty()) {
+            symbols.insert(temp);
+        }
+
+        if (symbols.empty()) {
+            return;
+        }
+
+        std::uniform_int_distribution<> distribSymb(0, symbols.size() - 1);
+        int randomSymbIndex = distribSymb(gen);
+        std::string nextSymbol = *std::next(symbols.begin(), randomSymbIndex);
+
+        std::string nextWord = currentWord + nextSymbol;
+
         visited[currentState]++;
         generateWordsHelper(automaton, nextWord, words, nextState, visited, quantity, limit);
         visited[currentState]--;
@@ -867,6 +894,7 @@ char generateRandomLetter() {
     std::string alphabet = "abcde";
     static std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count());
     std::uniform_int_distribution<int> dist(0, ALPHABET_SIZE - 1);
+
     return alphabet[dist(engine)];
 }
 
@@ -980,6 +1008,7 @@ std::string regexp::generateRandomRegex(int depth, int& currentStarHeight, int& 
     else if (choice < 50 && !nestedLookahead) {
         nestedLookahead = true;
         regex = generateRandomLookahead(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+        nestedLookahead = false;
     }
     else if (choice < 75) {
         regex = generateRandomBinary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
@@ -996,10 +1025,12 @@ std::string regexp::generateRandomRegex() {
     int currentNumLookaheads = 0;
     bool nestedLookahead = false;
     bool lookaheadInAlternative = false;
+
     std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count());
-    std::uniform_int_distribution<int> dist(1, MAX_LETTERS);
+    std::uniform_int_distribution<int> dist(4, MAX_LETTERS);
     int depth = dist(engine);
     std::string regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+
     while (regex == "") {
         currentStarHeight = 0;
         currentNumLookaheads = 0;
@@ -1014,15 +1045,24 @@ std::string regexp::generateRandomRegex() {
 
 void regexp::testRegularExpressions(const std::string& outputFileName, int numExpressions, int numWords) {
     std::ofstream outFile(outputFileName);
+
     if (!outFile) {
         std::cerr << "Cannot open the output file." << std::endl;
         return;
     }
+
     for (int i = 0; i < numExpressions; ++i) {
         std::string originalRegex = generateRandomRegex();
 
         Automaton automaton(1);
         std::string academicRegex = convertToAcademicRegex(originalRegex, &automaton);
+
+        outFile << "Original regex: " << originalRegex << "\n";
+        outFile << "Academic regex: " << academicRegex << "\n";
+
+        if (academicRegex.substr(0, 2) == "E|") {
+            academicRegex = academicRegex.substr(2);
+        }  
 
         std::vector<std::string> words = generateWords(automaton, numWords);
 
@@ -1032,16 +1072,16 @@ void regexp::testRegularExpressions(const std::string& outputFileName, int numEx
 
         for (const auto& word : words) {
             try {
-                if (!boost::regex_match(word, originalPattern)) {
+                if ((!word.empty() && !boost::regex_match(word, originalPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
                     mismatchesOriginal.insert(word);
                 }
             } catch (const boost::regex_error& e) {
                 std::cerr << "Error matching word '" << word << "' against original pattern: " << e.what() << std::endl;
                 complexWords.insert(word);
             }
-
+s
             try {
-                if (!boost::regex_match(word, academicPattern)) {
+                if ((!word.empty() && !boost::regex_match(word, academicPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
                     mismatchesAcademic.insert(word);
                 }
             } catch (const boost::regex_error& e) {
@@ -1050,10 +1090,9 @@ void regexp::testRegularExpressions(const std::string& outputFileName, int numEx
             }
         }
 
-        outFile << "Original regex: " << originalRegex << "\n";
-        outFile << "Academic regex: " << academicRegex << "\n";
         outFile << "Words generated: " << words.size() << "\n";
         outFile << "Words too complex to try matching with regexes: " << complexWords.size() << "\n";
+
         if (!mismatchesOriginal.empty() && !words.empty()) {
             outFile << "Words that do not match the original regex:\n";
             for (const auto& word : mismatchesOriginal) {
