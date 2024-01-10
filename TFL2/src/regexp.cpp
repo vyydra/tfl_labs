@@ -16,7 +16,8 @@ using namespace regexp;
 #define ALPHABET_SIZE 5
 #define MAX_LETTERS 10
 #define STAR_HEIGHT 3
-#define NUM_LOOKAHEADS 2
+#define NUM_LOOKAHEADS 3
+#define NUM_LOOKBEHINDS 3
 
 Automaton::Automaton(int statesNumber) {
     this->statesNumber = statesNumber;
@@ -788,11 +789,11 @@ bool regexp::dfs(Matrix<std::string>* transitionMatrix, Matrix<bool>* visitMatri
 
 	visitMatrix->set(sVertex, 0, true);
 
-	for(int i = 0; i < visitMatrix->getN(); i++) {
+	for (int i = 0; i < visitMatrix->getN(); i++) {
         if (transitionMatrix->get(sVertex, i) == "0") {
             continue;
         }
-		if(!visitMatrix->get(i, 0)) {
+		if (!visitMatrix->get(i, 0)) {
 			bool reached = dfs(transitionMatrix, visitMatrix, i, dVertices);
 			if (reached) {
                 return true;
@@ -828,7 +829,7 @@ void generateWordsHelper(Automaton& automaton, std::string currentWord, std::vec
         std::string transition = automaton.getTransitionMatrix()->get(currentState, nextState);
         std::set<std::string> symbols;
         std::string temp;
-        
+
         for (char c : transition) {
             if (c == '(' || c == ')' || c == '|') {
                 if (!temp.empty()) {
@@ -898,12 +899,12 @@ char generateRandomLetter() {
     return alphabet[dist(engine)];
 }
 
-std::string generateRandomUnary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
+std::string generateRandomUnary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative, int& currentNumLookbehinds, bool& prefixBinary, bool& unaryBinaryInLookbehind) {
     if (lookaheadInAlternative || depth - 1 <= 0) {
         return "";
     }
 
-    std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
     
     if (regex == "") {
         return regex;
@@ -915,21 +916,25 @@ std::string generateRandomUnary(int depth, int& currentStarHeight, int& currentN
         return letter;
     }
 
-    if (regex.find("(?=") != std::string::npos) {
+    if (regex.find("(?=") != std::string::npos || regex.find("(?<=") != std::string::npos) {
         return "";
     }
+
     currentStarHeight++;
+    prefixBinary = true;
 
     return "(" + regex + ")*";
 }
 
-std::string generateRandomLookahead(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
+std::string generateRandomLookahead(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative, int& currentNumLookbehinds, bool& prefixBinary, bool& unaryBinaryInLookbehind) {
     if (lookaheadInAlternative) {
         return "";
     }
 
-    std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
-    
+    std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
+
+    prefixBinary = true;
+
     if (currentNumLookaheads >= NUM_LOOKAHEADS || regex == "") {
         std::string letter;
         letter += generateRandomLetter();
@@ -952,7 +957,7 @@ std::string generateRandomLookahead(int depth, int& currentStarHeight, int& curr
     }
 
     if (depth - 1 > 0) {
-        std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+        regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
         if (regex == "") {
             return lookahead + generateRandomLetter();
         } else {
@@ -963,7 +968,53 @@ std::string generateRandomLookahead(int depth, int& currentStarHeight, int& curr
     }
 }
 
-std::string generateRandomBinary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
+std::string generateRandomLookbehind(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative, int& currentNumLookbehinds, bool& prefixBinary, bool& unaryBinaryInLookbehind) {
+    if (lookaheadInAlternative) {
+        return "";
+    }
+
+    std::string regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
+
+    prefixBinary = true;
+
+    if (currentNumLookaheads >= NUM_LOOKBEHINDS || regex == "") {
+        std::string letter;
+        letter += generateRandomLetter();
+        return letter;
+    }
+
+    currentNumLookbehinds++;
+
+    static std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<int> distBool(0, 1);
+    bool appendCaretSign = distBool(engine);
+
+    std::string lookbehind = "";
+
+    if (regex.find("*") != std::string::npos || regex.find("|") != std::string::npos) {
+        unaryBinaryInLookbehind = true;
+    }
+
+    if (appendCaretSign) {
+        lookbehind += "(?<=^" + regex + ")";
+    } else {
+        lookbehind += "(?<=" + regex + ")";
+    }
+
+    if (depth - 1 > 0) {
+        regex = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
+        if (regex == "") {
+            return generateRandomLetter() + lookbehind;
+        } else {
+            return regex + lookbehind;
+        }
+    } else {
+        return generateRandomLetter() + lookbehind;
+    }
+
+}
+
+std::string generateRandomBinary(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative, int& currentNumLookbehinds, bool& prefixBinary, bool& unaryBinaryInLookbehind) {
     if (lookaheadInAlternative || depth - 1 <= 0) {
         return "";
     }
@@ -971,11 +1022,18 @@ std::string generateRandomBinary(int depth, int& currentStarHeight, int& current
     if (depth <= 0) {
         std::string letter;
         letter += generateRandomLetter();
+        prefixBinary = true;
         return letter;
     }
 
-    std::string left = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);;
-    std::string right = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);;
+    bool temp = prefixBinary;
+
+    std::string left = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
+    std::string right = generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
+
+    if (temp && (left.find("(?<=") != std::string::npos || right.find("(?<=") != std::string::npos)) {
+        return "";
+    }
 
     if (left == "" || right == "") {
         return "";
@@ -984,17 +1042,19 @@ std::string generateRandomBinary(int depth, int& currentStarHeight, int& current
     if (left.find("(?=") != std::string::npos || right.find("(?=") != std::string::npos) {
         lookaheadInAlternative = true;
     }
+
+    prefixBinary = true;
     
     return "(" + left + "|" + right + ")";
 }
 
-std::string regexp::generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative) {
+std::string regexp::generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative, int& currentNumLookbehinds, bool& prefixBinary, bool& unaryBinaryInLookbehind) {
     if (depth <= 0) {
         return "";
     }
 
     if (lookaheadInAlternative) {
-        return generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+        return generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
     }
 
     std::string regex;
@@ -1002,42 +1062,54 @@ std::string regexp::generateRandomRegex(int depth, int& currentStarHeight, int& 
     std::uniform_int_distribution<int> dist(0, 100);
     int choice = dist(engine);
 
-    if (choice < 25) {
-        regex = generateRandomUnary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    if (choice < 20) {
+        regex = generateRandomUnary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
     }
-    else if (choice < 50 && !nestedLookahead) {
+    else if (choice < 40 && !nestedLookahead) {
         nestedLookahead = true;
-        regex = generateRandomLookahead(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+        regex = generateRandomLookahead(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
         nestedLookahead = false;
     }
-    else if (choice < 75) {
-        regex = generateRandomBinary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    else if (choice < 60 && !nestedLookahead) {
+        nestedLookahead = true;
+        regex = generateRandomLookbehind(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
+        nestedLookahead = false;
+    }
+    else if (choice < 80) {
+        regex = generateRandomBinary(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
     }
     else {
+        prefixBinary = true;
         regex = generateRandomLetter();
     }
 
-    return regex + generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    return regex + generateRandomRegex(depth - 1, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
 }
+
+bool unaryBinaryInLookbehind = false;
 
 std::string regexp::generateRandomRegex() {
     int currentStarHeight = 0;
     int currentNumLookaheads = 0;
+    int currentNumLookbehinds = 0;
     bool nestedLookahead = false;
     bool lookaheadInAlternative = false;
+    bool prefixBinary = false;
 
     std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count());
     std::uniform_int_distribution<int> dist(4, MAX_LETTERS);
     int depth = dist(engine);
-    std::string regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+    std::string regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
 
     while (regex == "") {
         currentStarHeight = 0;
         currentNumLookaheads = 0;
         nestedLookahead = false;
         lookaheadInAlternative = false;
+        prefixBinary = false;
+
         depth = dist(engine);
-        regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative);
+        regex = generateRandomRegex(depth, currentStarHeight, currentNumLookaheads, nestedLookahead, lookaheadInAlternative, currentNumLookbehinds, prefixBinary, unaryBinaryInLookbehind);
     }
 
     return "^" + regex + "$";
@@ -1071,13 +1143,15 @@ void regexp::testRegularExpressions(const std::string& outputFileName, int numEx
         boost::regex academicPattern(academicRegex);
 
         for (const auto& word : words) {
-            try {
-                if ((!word.empty() && !boost::regex_match(word, originalPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
-                    mismatchesOriginal.insert(word);
+            if (!unaryBinaryInLookbehind) {
+                try {
+                    if ((!word.empty() && !boost::regex_match(word, originalPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
+                        mismatchesOriginal.insert(word);
+                    }
+                } catch (const boost::regex_error& e) {
+                    std::cerr << "Error matching word '" << word << "' against original pattern: " << e.what() << std::endl;
+                    complexWords.insert(word);
                 }
-            } catch (const boost::regex_error& e) {
-                std::cerr << "Error matching word '" << word << "' against original pattern: " << e.what() << std::endl;
-                complexWords.insert(word);
             }
 s
             try {
@@ -1099,7 +1173,11 @@ s
                 outFile << word << "\n";
             }
         } else if (!words.empty()) {
-            outFile << "All words match the original regex.\n";
+            if (unaryBinaryInLookbehind) {
+                outFile << "The original regex has lookbehind with alternative  or star: no check for word match is performed\n";
+            } else {
+                outFile << "All words match the original regex.\n";
+            }        
         }
         if (!mismatchesAcademic.empty() && !words.empty()) {
             outFile << "Words that do not match the academic regex:\n";

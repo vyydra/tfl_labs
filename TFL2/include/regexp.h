@@ -248,8 +248,11 @@ namespace regexp {
      * @param currentNumLookaheads the current lookaheads amount in regular expression.
      * @param nestedLookahead the presence of nested lookaheads in regular expression.
      * @param lookaheadInAlternative the presence of lookaheads inside alternative operation.
+     * @param currentNumLookbehinds the current lookbehinds amount in regular expression.
+     * @param prefixBinary the presence of concatenation prefix before binary operation in regular expression.
+     * @param unaryBinaryInLookbehindthe presence of unary or binary operations in lookbehind.
     */
-    std::string generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative);
+    std::string generateRandomRegex(int depth, int& currentStarHeight, int& currentNumLookaheads, bool nestedLookahead, bool& lookaheadInAlternative, int& currentNumLookbehinds, bool& prefixBinary, bool& unaryBinaryInLookbehind);
 
     /**
      * Generates random regular expression.
