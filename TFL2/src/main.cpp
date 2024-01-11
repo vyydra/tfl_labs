@@ -4,7 +4,7 @@
 #include <regexp.h>
 
 int main(int argc, char *argv[]) {
-    std::string regex = "^(d(?<=ab)(d)*c|a(?<=aa)cab)a(?<=d)b(de)*de$";
+    std::string regex = "^$";
     regexp::Automaton automaton(1);
     std::cout << "source regex: " << regex << std::endl << std::endl;
     std::string academicRegex = regexp::convertToAcademicRegex(regex, &automaton);

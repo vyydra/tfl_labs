@@ -1077,6 +1077,9 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
 }
 
 std::string regexp::convertToAcademicRegex(std::string source, Automaton* automaton) {
+    if (source == "^$") {
+        return "()";
+    }
     source = removeExtraParentheses(source);
     std::set<char> alphabet = getAlphabetOf(source);
     
