@@ -1124,6 +1124,7 @@ void regexp::testRegularExpressions(const std::string& outputFileName, int numEx
     }
 
     for (int i = 0; i < numExpressions; ++i) {
+        unaryBinaryInLookbehind = false;
         std::string originalRegex = generateRandomRegex();
 
         Automaton automaton(1);
@@ -1139,28 +1140,38 @@ void regexp::testRegularExpressions(const std::string& outputFileName, int numEx
         std::vector<std::string> words = generateWords(automaton, numWords);
 
         std::set<std::string> mismatchesOriginal, mismatchesAcademic, complexWords;
-        boost::regex originalPattern(originalRegex);
         boost::regex academicPattern(academicRegex);
 
-        for (const auto& word : words) {
-            if (!unaryBinaryInLookbehind) {
+        if (!unaryBinaryInLookbehind) {
+            boost::regex originalPattern(originalRegex);
+            for (const auto& word : words) {
                 try {
                     if ((!word.empty() && !boost::regex_match(word, originalPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
-                        mismatchesOriginal.insert(word);
+                    mismatchesOriginal.insert(word);
                     }
                 } catch (const boost::regex_error& e) {
                     std::cerr << "Error matching word '" << word << "' against original pattern: " << e.what() << std::endl;
                     complexWords.insert(word);
                 }
-            }
-s
-            try {
-                if ((!word.empty() && !boost::regex_match(word, academicPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
-                    mismatchesAcademic.insert(word);
-                }
-            } catch (const boost::regex_error& e) {
+                try {
+                    if ((!word.empty() && !boost::regex_match(word, academicPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
+                        mismatchesAcademic.insert(word);
+                    }
+                } catch (const boost::regex_error& e) {
                     std::cerr << "Error matching word '" << word << "' against academic pattern: " << e.what() << std::endl;
                     complexWords.insert(word);
+                }
+            }  
+        } else {
+            for (const auto& word : words) {
+                try {
+                    if ((!word.empty() && !boost::regex_match(word, academicPattern)) || (word.empty() && automaton.getFinalStateMatrix()->get(0, 0) != 1)) {
+                        mismatchesAcademic.insert(word);
+                    }
+                } catch (const boost::regex_error& e) {
+                    std::cerr << "Error matching word '" << word << "' against academic pattern: " << e.what() << std::endl;
+                    complexWords.insert(word);
+                }
             }
         }
 
