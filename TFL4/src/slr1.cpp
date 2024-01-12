@@ -199,20 +199,95 @@ void slr1::parse(Grammar grammar, std::string word) {
     }
 
     std::cout << std::endl;
-    
-    // NEXT -> CREATING TABLE
-
-    /*
-        (0) E0→S
-        (1) S→S+T
-        (2) S→T
-        (3) T→n
-        (4) T→(S)
-    */
 
     for (int i = 0; i < rules.size(); i++) {
         std::cout << "(" << i << ") " << rules[i].toString() << std::endl;
     }
+
+    std::vector<std::map<char, std::pair<std::string, int>>> table;
+
+    for (int i = 0; i < automaton.getStates()->size(); i++) {
+        std::map<char, std::pair<std::string, int>> map;
+        std::pair<std::string, int> pair("", 0);
+        for (auto terminal : grammar.getTerminals()) {
+            map.insert({terminal, pair});
+        }
+        for (auto nonterminal : grammar.getNonterminals()) {
+            map.insert({nonterminal, pair});
+        }
+        map.insert({'~', pair});
+        table.push_back(map);
+    }
+
+    for (int i = 0; i < automaton.getStates()->size(); i++) {
+        for (int j = 0; j < automaton.getStates()->at(i).size(); j++) {
+            ProductionRule item = automaton.getStates()->at(i)[j];
+            if (item.getLeftPart() == "s0" && item.getRightPart() == "S.") {
+                std::pair<std::string, int> pair("accept", 0);
+                table[i]['~'] = pair;
+            } else if (item.getRightPart()[item.getRightPart().length() - 1] == '.') {
+                for (auto a : follow[item.getLeftPart()[0]]) {
+                    std::string rightPart = item.getRightPart().substr(0, item.getRightPart().length() - 1);
+                    int index = -1;
+                    for (int k = 0; k < rules.size(); k++) {
+                        if (rules[k].getLeftPart() == item.getLeftPart() && rules[k].getRightPart() == rightPart) {
+                            index = k;
+                            break;
+                        }
+                    }
+                    std::pair<std::string, int> pair("reduce", index);
+                    table[i][a] = pair;
+                }
+            } else if (isNonTerminal(grammar, item.getRightPart()[item.getRightPart().find('.') + 1])) {
+                char nonterminal = item.getRightPart()[item.getRightPart().find('.') + 1];
+                int index = -1;
+                for (int k = 0; k < automaton.getStates()->size(); k++) {
+                    if (automaton.getTransitionMatrix()->get(i, k) == nonterminal) {
+                        index = k;
+                        break;
+                    }
+                }
+                std::pair<std::string, int> pair("goto", index);
+                table[i][nonterminal] = pair;
+            } else {
+                char terminal = item.getRightPart()[item.getRightPart().find('.') + 1];
+                int index = -1;
+                for (int k = 0; k < automaton.getStates()->size(); k++) {
+                    if (automaton.getTransitionMatrix()->get(i, k) == terminal) {
+                        index = k;
+                        break;
+                    }
+                }
+                std::pair<std::string, int> pair("shift", index);
+                table[i][terminal] = pair;
+            }
+        }
+    }
+
+    std::cout << "SLR(1) TABLE: " << std::endl;
+
+    for (int i = 0; i < table.size(); i++) {
+        std::cout << i << ":" << std::endl;
+        std::pair<std::string, int> pair("", 0);
+        for (auto terminal : grammar.getTerminals()) {
+            if (table[i][terminal].first != "") {
+                std::cout << terminal << " [" << table[i][terminal].first << ", " << table[i][terminal].second << "]" << std::endl;
+            }
+        }
+
+        if (table[i]['~'].first != "") {
+            std::cout << '~' << " [" << table[i]['~'].first << ", " << table[i]['~'].second << "]" << std::endl;
+        }
+
+        for (auto nonterminal : grammar.getNonterminals()) {
+            if (table[i][nonterminal].first != "") {
+                std::cout << nonterminal << " [" << table[i][nonterminal].first << ", " << table[i][nonterminal].second << "]" << std::endl;
+            }
+        }
+
+        std::cout << std::endl;
+    }
+
 
     // ...
 
@@ -503,7 +578,7 @@ void slr1::constructFirst(Grammar grammar, std::map<char, std::set<char>>* first
 }
 
 void slr1::constructFollow(Grammar grammar, std::map<char, std::set<char>>* first, std::map<char, std::set<char>>* follow) {
-    // //FOLLOW[S]={$}
+    follow->at('S').insert('~');
     int j = 0;
     bool changed = true;
     while (changed) {
