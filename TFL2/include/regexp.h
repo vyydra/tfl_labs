@@ -96,10 +96,6 @@ namespace regexp {
         static Automaton getKleeneClosure(Automaton& a);
 
         static Automaton getIntersection(Automaton& a1, Automaton& a2);
-
-        //std::vector<std::string> findPaths(Automaton& automaton, std::stack<int>& dfsStack);
-
-        /*void writeWordsToFile(const std::string& filename);*/
     };
 
     /**
@@ -171,7 +167,18 @@ namespace regexp {
      * @param end the end position.
      * @return the result regular expression.
     */
-    std::string convertLookaheadsToIntersections(std::string& source, int start, int end);
+    std::string convertLookaheadsToIntersections(std::string source, int start, int end);
+
+    /**
+     * Converts a regular expression containing lookbehinds to a regular expression containing intersections
+     * in the range from `start` position to `end` position.
+     * 
+     * @param source the source regular expression.
+     * @param start the start position.
+     * @param end the end position.
+     * @return the result regular expression.
+    */
+    std::string convertLookbehindsToIntersections(std::string source, int start, int end);
 
     /**
      * Converts a regular expression containing lookaheads to a regular expression containing intersections.
@@ -179,7 +186,15 @@ namespace regexp {
      * @param source the source regular expression.
      * @return the result regular expression.
     */
-    std::string convertLookaheadsToIntersections(std::string& source);
+    std::string convertLookaheadsToIntersections(std::string source);
+
+    /**
+     * Converts a regular expression containing lookbehinds to a regular expression containing intersections.
+     * 
+     * @param source the source regular expression.
+     * @return the result regular expression.
+    */
+    std::string convertLookbehindsToIntersections(std::string source);
 
     /**
      * Removes the specified string from a source string.
@@ -219,7 +234,7 @@ namespace regexp {
      * @param source the source regular expression to be converted.
      * @return the academic regular expression.
     */
-    std::string convertToAcademicRegex(std::string& source, Automaton* automaton);
+    std::string convertToAcademicRegex(std::string source, Automaton* automaton);
 
     /**
      * Performs depth-first search from a start vertex to destination vertices.
@@ -231,6 +246,40 @@ namespace regexp {
      * @return whether at least one destination vertex has been visited.
     */
     bool dfs(Matrix<std::string>* transitionMatrix, Matrix<bool>* visitMatrix, int sVertex, std::vector<int>* dVertices);
+
+    /**
+     * Extracts a substring from a string.
+     * 
+     * @param source the source string.
+     * @param start the start symbol of the substring.
+     * @param end the end symbol of the substring.
+     * @return the substring to be extracted.
+    */
+    std::string getSubstring(std::string source, int start, int end);
+
+    /**
+     * Removes any extra parentheses in a regular expression which can contain lookaheads and lookbehinds.
+     * 
+     * @param source the source regular expression.
+     * @return the output regular expression.
+    */
+    std::string removeExtraParentheses(std::string source);
+
+    /**
+     * Removes all lookaheads in a regular expression.
+     * 
+     * @param source the source regular expression.
+     * @return the output regular expression without lookaheads.
+    */
+    std::string removeLookaheads(std::string source);
+
+    /**
+     * Removes all lookbehinds in a regular expression.
+     * 
+     * @param source the source regular expression.
+     * @return the output regular expression without lookbehinds.
+    */
+    std::string removeLookbehinds(std::string source);
 
     /**
     * Generates the given amount of words accepted by the given automaton.

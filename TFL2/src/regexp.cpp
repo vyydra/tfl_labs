@@ -310,7 +310,7 @@ std::vector<Lexer::Token> Lexer::tokenize(std::string source, std::set<char> alp
             case '*':
                 vector.push_back(Token(std::string(1, source[i]), Token::kKleeneStar));
                 if (i < source.length() - 1 && source[i + 1] != ')' && source[i + 1] != '|' && source[i + 1] != '&') {
-                    vector.push_back(Token("+", Token::kConcatenation));
+                    vector.push_back(Token("_", Token::kConcatenation));
                 }
                 break;
             case '&':
@@ -398,7 +398,186 @@ std::set<char> regexp::getAlphabetOf(std::string source) {
     return alphabet;
 }
 
-std::string regexp::convertLookaheadsToIntersections(std::string& source, int start, int end) {
+std::string regexp::getSubstring(std::string source, int start, int end) {
+    return source.substr(start, end - start + 1);
+} 
+
+std::string regexp::removeExtraParentheses(std::string source) {
+    if (source.length() <= 2) {
+        return source;
+    }
+    // removing '(' and ')' in source = (...)
+    // except:
+    // source = (...)...(...)
+    // source = (?=...)
+    // source = (?<=...)
+    if (source[0] == '(' && source[source.length() - 1] == ')') {
+        if (source[1] != '?') {
+            int n = 0;
+            for (int i = 1; i < source.length() - 1; i++) {
+                if (source[i] == '(') {
+                    n++;
+                } else if (source[i] == ')') {
+                    n--;
+                    if (n < 0) {
+                        break;
+                    }
+                }
+            }
+            if (n == 0) {
+                return removeExtraParentheses(getSubstring(source, 1, source.length() - 2));
+            }
+        }
+    }
+
+    // (?=...) and (?<=...)
+    // except like (?...)...(...)*
+    if (source[0] == '(' && source[source.length() - 1] == ')') {
+        if (source.length() >= 4) {
+            if (source[1] == '?' && source[2] == '=') {
+                if (source.length() == 4) {
+                    return source;
+                } else {
+                    int n = 0;
+                    for (int i = 3; i < source.length() - 1; i++) {
+                        if (source[i] == '(') {
+                            n++;
+                        } else if (source[i] == ')') {
+                            n--;
+                            if (n < 0) {
+                                break;
+                            }
+                        }
+                    }
+                    if (n == 0) {
+                        return "(?=" + removeExtraParentheses(getSubstring(source, 3, source.length() - 2)) + ")";
+                    }
+                }
+            }
+        } else if (source.length() >= 5) {
+            if (source[1] == '?' && source[2] == '<' && source[3] == '=') {
+                if (source.length() == 5) {
+                    return source;
+                } else {
+                    int n = 0;
+                    for (int i = 4; i < source.length() - 1; i++) {
+                        if (source[i] == '(') {
+                            n++;
+                        } else if (source[i] == ')') {
+                            n--;
+                            if (n < 0) {
+                                break;
+                            }
+                        }
+                    }
+                    if (n == 0) {
+                        return "(?<=" + removeExtraParentheses(getSubstring(source, 4, source.length() - 2)) + ")";
+                    }
+                }
+            }
+        }
+    }
+
+    // source = (...)*
+    // except like (...)...(...)*
+    if (source.length() > 3) {
+        if (source[0] == '(' && source[source.length() - 1] == '*') {
+            if (source.length() == 4) {
+                return getSubstring(source, 1, 1) + "*";
+            } else {
+                int n = 0;
+                for (int i = 1; i < source.length() - 2; i++) {
+                    if (source[i] == '(') {
+                        n++;
+                    } else if (source[i] == ')') {
+                        n--;
+                        if (n < 0) {
+                            break;
+                        }
+                    }
+                }
+                if (n == 0) {
+                    return "(" + removeExtraParentheses(getSubstring(source, 1, source.length() - 3)) + ")*";
+                }
+            }
+        }
+    }
+
+    //source = ... | ...
+    int n = 0;
+    for (int i = 0; i < source.length(); i++) {
+        if (source[i] == '(') {
+            n++;
+        } else if (source[i] == ')') {
+            n--;
+        } else if (n == 0 && source[i] == '|') {
+            return removeExtraParentheses(getSubstring(source, 0, i - 1)) + "|" + removeExtraParentheses(getSubstring(source, i + 1, source.length() - 1));
+        }
+    }
+
+    std::string output;
+
+    n = 0;
+    bool parentheses = false;
+    int startIndex = 0;
+    int endIndex = -1;
+    for (int i = 0; i < source.length() - 1; i++) {
+        if (source[i] == '(') {
+            if (n == 0 && !parentheses) {
+                startIndex = i;
+                parentheses = true;
+            }
+            n++;
+        } else if (source[i] == ')') {
+            n--;
+            if (n == 0 && parentheses) {
+                if (i < source.length() - 1 && source[i + 1] == '*') {
+                    if (startIndex - endIndex > 1) {
+                        output += getSubstring(source, endIndex + 1, startIndex - 1);
+                    }
+                    endIndex = i + 1;
+                    output += removeExtraParentheses(getSubstring(source, startIndex, endIndex));
+                    i++;
+                } else {
+                    int m = 0;
+                    bool alternativeExist = false;
+                    for (int j = startIndex + 1; j < i; j++) {
+                        if (source[j] == '(') {
+                            m++;
+                        } else if (source[j] == ')') {
+                            m--;
+                        } else if (m == 0 && source[j] == '|') {
+                            alternativeExist = true;
+                            break;
+                        }
+                    }
+                    if (startIndex - endIndex > 1) {
+                        output += getSubstring(source, endIndex + 1, startIndex - 1);
+                    }
+                    endIndex = i;
+                    if (alternativeExist) {
+                        output += "(" + removeExtraParentheses(getSubstring(source, startIndex + 1, endIndex - 1)) + ")";
+                    } else {
+                        if (endIndex - startIndex - 1 > 0) {
+                            output += removeExtraParentheses(getSubstring(source, startIndex, endIndex));
+                        }
+                    }
+                }
+                parentheses = false;
+            }
+        }
+    }
+
+    if (endIndex == -1) {
+        return source;
+    } else if (endIndex < source.length() - 1) {
+        output += getSubstring(source, endIndex + 1, source.length() - 1);
+    }
+
+    return output;
+}
+
+std::string regexp::convertLookaheadsToIntersections(std::string source, int start, int end) {
 
     if (start > end) {
         return "";
@@ -421,6 +600,7 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
     n = 1;
     int i = start;
     bool existEndSymbol = false;
+    bool existLookahead = false;
     while (i <= end) {
         if (i <= end - 2 && source[i + 1] == '?' && source[i + 2] == '=') {
             i += 3;
@@ -437,7 +617,13 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
                 } 
                 j++;
             }
-            r2 = convertLookaheadsToIntersections(source, i, j - 2);
+            if (existEndSymbol) {
+                r2 = getSubstring(source, i, j - 3);
+            } else {
+                r2 = getSubstring(source, i, j - 2);
+            }
+            r2 = getSubstring(source, i, j - 2);
+            existLookahead = true;
             i = j;
             break;
         }
@@ -446,14 +632,12 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
         i++;
     }
 
-    if (!r2.empty()) {
+    if (existLookahead) {
         result += "(" + r2;
         if (!existEndSymbol) {
             result += ".*";
         }
-
         result += "&" + convertLookaheadsToIntersections(source, i, end) + ")";
-        
     }
 
     result += ")";
@@ -461,8 +645,187 @@ std::string regexp::convertLookaheadsToIntersections(std::string& source, int st
     return result;
 }
 
-std::string regexp::convertLookaheadsToIntersections(std::string& source) {
+std::string regexp::convertLookbehindsToIntersections(std::string source, int start, int end) {
+    if (start > end) {
+        return "";
+    }
+
+    int n = 0;
+    
+    for (int i = end; i >= start; i--) {
+        if (source[i] == ')') {
+            n++;
+        } else if (source[i] == '(') {
+            n--;
+        } else if (n == 0 && source[i] == '|') {
+            return "(" + convertLookbehindsToIntersections(source, start, i - 1) + "|" + convertLookbehindsToIntersections(source, i + 1, end) + ")";
+        }
+    }
+
+    std::string result = ")";
+    std::string r2 = "";
+    int i = end;
+    bool existStartSymbol = false;
+    int index = -1;
+    std::stack<int> stack;
+
+    while (i >= start) {
+        if (source[i] == ')') {
+            stack.push(i);
+        }
+        if (source[i] == '(') {
+            if (i <= end - 3 && source[i + 1] == '?' && source[i + 2] == '<' && source[i + 3] == '=' && stack.size() == 1) {
+                if (i <= end - 4) {
+                    if (source[i + 4] == '^') {
+                        existStartSymbol = true;
+                    }
+                }
+                index = stack.top();
+                stack.pop();
+                r2 = convertLookbehindsToIntersections(source, i + 4, index - 1);
+                i--;
+                break;
+            }
+            stack.pop();
+        }
+        i--;
+    }
+
+    if (index != -1) {
+        result = getSubstring(source, index + 1, end) + result;
+    } else {
+        result = getSubstring(source, start, end) + result;
+    }
+
+    if (!r2.empty()) {
+        result = r2 + ")" + result;
+        if (!existStartSymbol) {
+            result = ".*" + result;
+        }
+
+        result = "(" + convertLookbehindsToIntersections(source, start, i) + "&" + result;
+    }
+
+    result = "(" + result;
+
+    return result;
+}
+
+
+std::string regexp::convertLookaheadsToIntersections(std::string source) {
+    if (source[source.length() - 2] == ')') {
+        bool containsLookaheads = false;
+        int index = -1;
+        int n = 1;
+        for (int i = source.length() - 3; i >= 0; i--) {
+            if (source[i] == ')') {
+                n++;
+            } else if (source[i] == '(') {
+                n--;
+            }
+            if (n == 1 && source[i] == '|' && !containsLookaheads) {
+                containsLookaheads = true;
+            }
+            if (n == 0) {
+                index = i;
+                break;
+            }
+        }
+        if (containsLookaheads) {
+            std::string part = convertLookaheadsToIntersections(source, index + 1, source.length() - 3);
+            source = getSubstring(source, 0, index - 1) + "(" + part + ")$";
+        }
+    }
+
     return convertLookaheadsToIntersections(source, 0, source.length() - 1);
+}
+
+std::string regexp::convertLookbehindsToIntersections(std::string source) {
+    if (source[1] == '(') {
+        bool containsLookbehinds = false;
+        int index = -1;
+        int n = 1;
+        for (int i = 2; i < source.length(); i++) {
+            if (source[i] == '(') {
+                n++;
+            } else if (source[i] == ')') {
+                n--;
+            }
+            if (n == 1 && source[i] == '|' && !containsLookbehinds) {
+                containsLookbehinds = true;
+            }
+            if (n == 0) {
+                index = i;
+                break;
+            }
+        }
+        if (containsLookbehinds) {
+            std::string part = convertLookbehindsToIntersections(source, 2, index - 1);
+            source = "^(" + part + ")" + getSubstring(source, index + 1, source.length() - 1);
+        }
+    }
+
+    return convertLookbehindsToIntersections(source, 0, source.length() - 1);
+}
+
+std::string regexp::removeLookaheads(std::string source) {
+    std::string output;
+    int n = 0;
+
+    int found = false;
+    for (int i = 0; i < source.length(); i++) {
+        if (source[i] == '(') {
+            if (i < source.length() - 2) {
+                if (source[i + 1] == '?' && source[i + 2] == '=') {
+                    found = true;
+                    n = 0;
+                }
+            }
+            n++;
+        }
+        if (source[i] == ')') {
+            n--;
+            if (found && n == 0) {
+                found = false;
+                continue;
+            }
+        }
+        if (!found) {
+            output += source[i];
+        }
+    }
+
+    return output;
+}
+
+std::string regexp::removeLookbehinds(std::string source) {
+    std::string output;
+    int n = 0;
+
+    int found = false;
+    for (int i = 0; i < source.length(); i++) {
+        if (source[i] == '(') {
+            if (i < source.length() - 3) {
+                if (source[i + 1] == '?' && source[i + 2] == '<' && source[i + 3] == '=') {
+                    found = true;
+                    n = 0;
+                }
+            }
+            n++;
+        }
+        if (source[i] == ')') {
+            n--;
+            if (found && n == 0) {
+                found = false;
+                continue;
+            }
+        }
+        if (!found) {
+            output += source[i];
+        }
+    }
+
+    return output;
 }
 
 void regexp::removeFrom(std::string& source, std::string const& toRemove) {
@@ -723,12 +1086,21 @@ std::string regexp::convertAutomatonToRegex(Automaton automaton) {
     return regex;
 }
 
-std::string regexp::convertToAcademicRegex(std::string& source, Automaton* automaton) {
+std::string regexp::convertToAcademicRegex(std::string source, Automaton* automaton) {
+    if (source == "^$") {
+        return "()";
+    }
+    source = removeExtraParentheses(source);
     std::set<char> alphabet = getAlphabetOf(source);
-    std::string expression = convertLookaheadsToIntersections(source);
+    
+    std::string ex1 = convertLookaheadsToIntersections(removeLookbehinds(source));
+    std::string ex2 = convertLookbehindsToIntersections(removeLookaheads(source));
+    std::string expression = "(" + ex1 + "&" + ex2 + ")";
+
     removeFrom(expression, "$");
     removeFrom(expression, "^");
     replaceDots(expression, alphabet);
+    
     Lexer lexer;
     std::vector<Lexer::Token> infixTokens = lexer.tokenize(expression, alphabet);
     std::vector<Lexer::Token> postfixTokens = convertToPostfixForm(infixTokens);
@@ -775,6 +1147,12 @@ std::string regexp::convertToAcademicRegex(std::string& source, Automaton* autom
 
     std::string academicRegex = convertAutomatonToRegex(*automaton);
 
+    academicRegex = removeExtraParentheses(academicRegex);
+
+    if (academicRegex == "") {
+        academicRegex = "()";
+    }
+
     return academicRegex;
 }
 
@@ -789,11 +1167,11 @@ bool regexp::dfs(Matrix<std::string>* transitionMatrix, Matrix<bool>* visitMatri
 
 	visitMatrix->set(sVertex, 0, true);
 
-	for (int i = 0; i < visitMatrix->getN(); i++) {
+	for(int i = 0; i < visitMatrix->getN(); i++) {
         if (transitionMatrix->get(sVertex, i) == "0") {
             continue;
         }
-		if (!visitMatrix->get(i, 0)) {
+		if(!visitMatrix->get(i, 0)) {
 			bool reached = dfs(transitionMatrix, visitMatrix, i, dVertices);
 			if (reached) {
                 return true;
