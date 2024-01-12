@@ -425,7 +425,59 @@ Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g
         }
     }
 
-    return a;
+    for (int i = 0; i < a.getStates()->size(); i++) {
+        bool emptyState = true;
+        for (int j = 0; j < a.getStates()->size(); j++) {
+            if (a.getTransitionMatrix()->get(i, j) != '0') {
+                emptyState = false;
+                break;
+            }
+        }
+        if (emptyState) {
+            for (int j = 0; j < a.getStates()->size(); j++) {
+                if (a.getTransitionMatrix()->get(j, i) != '0') {
+                    emptyState = false;
+                    break;
+                }
+            }
+
+            if (emptyState) {
+                std::vector<ProductionRule> empty;
+                a.getStates()->at(i) = empty;
+            }
+        }
+    }
+
+    Automaton result;
+
+    std::map<int, int> map;
+    int index = 0;
+    for (int i = 0; i < a.getStates()->size(); i++) {
+        if (!a.getStates()->at(i).empty()) {
+            map.insert({i, index});
+            if (a.getFinalStates().count(i) > 0) {
+                result.addFinalState(index);
+            }
+            result.add(a.getStates()->at(i));
+            index++;
+        }
+    }
+
+    for (int i = 0; i < a.getStates()->size(); i++) {
+        if (!a.getStates()->at(i).empty()) {
+            if (i == 1) {
+                std::cout << a.getStates()->at(i)[0].toString();
+            }
+            for (int j = 0; j < a.getStates()->size(); j++) {
+                if (a.getTransitionMatrix()->get(i, j) != '0') {
+                    result.getTransitionMatrix()->set(map[i], map[j], a.getTransitionMatrix()->get(i, j));
+                }
+            }
+        }
+    }
+
+
+    return result;
 }
 
 void slr1::constructFirst(Grammar grammar, std::map<char, std::set<char>>* first) {
