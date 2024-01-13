@@ -3,6 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <map>
+#include <stack>
 
 using namespace slr1;
 
@@ -76,6 +77,10 @@ void Automaton::setInitialState(int state) {
     initialState = state;
 }
 
+int Automaton::getInitialState() {
+    return initialState;
+}
+
 void Automaton::addFinalState(int state) {
     finalStates.insert(state);
 }
@@ -147,7 +152,10 @@ std::string Automaton::toString() {
 
 void slr1::parse(Grammar grammar, std::string word) {
     std::vector<ProductionRule> g;
-    g.push_back(ProductionRule("s0", ".S")); // s0 = S₀ 's' must be small for this algorithm
+    char lowercaseLetter = grammar.getProductionRules()[0].getLeftPart()[0] + 32;
+    std::string lhs = std::string(1, lowercaseLetter) + "0";
+    std::string rhs = "." + grammar.getProductionRules()[0].getLeftPart();
+    g.push_back(ProductionRule(lhs, rhs)); // s0 = S₀ 's' must be small for this algorithm
     for (int i = 0; i < grammar.getProductionRules().size(); i++) {
         g.push_back(ProductionRule(grammar.getProductionRules()[i].getLeftPart(), "." + grammar.getProductionRules()[i].getRightPart()));
     }
@@ -160,8 +168,8 @@ void slr1::parse(Grammar grammar, std::string word) {
     std::map<char, std::set<char>> follow;
 
     for (auto nonterminal : grammar.getNonterminals()) {
-        first.insert({nonterminal, std::set<char>()});
-        follow.insert({nonterminal, std::set<char>()});
+        first.insert({ nonterminal, std::set<char>() });
+        follow.insert({ nonterminal, std::set<char>() });
     }
 
     constructFirst(grammar, &first);
@@ -193,13 +201,13 @@ void slr1::parse(Grammar grammar, std::string word) {
     }
 
     std::vector<ProductionRule> rules;
-    rules.push_back(ProductionRule("s0", "S")); // s0 = S₀
+    rules.push_back(ProductionRule(lhs, grammar.getProductionRules()[0].getLeftPart())); // s0 = S₀
     for (int i = 0; i < grammar.getProductionRules().size(); i++) {
         rules.push_back(ProductionRule(grammar.getProductionRules()[i].getLeftPart(), grammar.getProductionRules()[i].getRightPart()));
     }
 
     std::cout << std::endl;
-    
+
     // NEXT -> CREATING TABLE
 
     /*
@@ -214,11 +222,114 @@ void slr1::parse(Grammar grammar, std::string word) {
         std::cout << "(" << i << ") " << rules[i].toString() << std::endl;
     }
 
-    // ...
+    std::map<std::pair<int, char>, std::string> actionTable;
+    std::map<std::pair<int, char>, int> gotoTable;
+    for (auto nonterminal : grammar.getNonterminals()) {
+        follow[nonterminal].insert('$');
+    }
 
-    // PARSING
+    for (int state = 0; state < automaton.getStates()->size(); state++) {
+        for (char terminal : grammar.getTerminals()) {
+            for (int nextState = 0; nextState < automaton.getStates()->size(); nextState++) {
+                if (automaton.getTransitionMatrix()->get(state, nextState) == terminal) {
+                    actionTable[{state, terminal}] = "s" + std::to_string(nextState);
+                }
+            }
+        }
+    }
 
-    // ...
+    char i = grammar.getStartSymbol();
+
+    for (int state = 0; state < automaton.getStates()->size(); state++) {
+        for (int itemNum = 0; itemNum < automaton.getStates()->at(state).size(); itemNum++) {
+            auto item = automaton.getStates()->at(state)[itemNum];
+            if (item.getLeftPart()[0] != rules[0].getLeftPart()[0]) {
+                if (isNonTerminal(grammar, item.getLeftPart()[0])) {
+                    int index = 0;
+                    for (int i = 0; i < item.getRightPart().size(); i++) {
+                        if (item.getRightPart()[i] == '.') {
+                            index = i;
+                            break;
+                        }
+                    }
+                    if (index == item.getRightPart().size() - 1) {
+                        char symbol = item.getRightPart()[index];
+                        auto j = follow.at(item.getLeftPart()[0]);
+                        for (auto symbol: follow.at(item.getLeftPart()[0])) {
+                            std::string beforeDot = item.getRightPart().substr(0, index);
+                            std::string afterDot = item.getRightPart().substr(index + 1);
+                            std::string merged = beforeDot + afterDot;
+                            int ruleNumber = 0;
+                            for (auto rule : grammar.getProductionRules()) {
+                                if (rule.getLeftPart() == item.getLeftPart()) {
+                                    if (rule.getRightPart() == merged) {
+                                        actionTable[{state, symbol}] = "r" + std::to_string(ruleNumber);
+                                    }
+                                }
+                                ruleNumber++;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (item.getRightPart()[item.getRightPart().size() - 1] == '.') {
+                actionTable[{state, '$'}] = "acc";
+            }
+        }
+    }
+
+    for (int state = 0; state < automaton.getStates()->size(); state++) {
+        for (char nonterminal : grammar.getNonterminals()) {
+            for (int nextState = 0; nextState < automaton.getStates()->size(); nextState++) {
+                if (automaton.getTransitionMatrix()->get(state, nextState) == nonterminal) {
+                    gotoTable[{state, nonterminal}] = nextState;
+                }
+            }
+        }
+    }
+
+    std::stack<int> stack;
+    std::stack<char> inputBuffer;
+
+    stack.push(automaton.getInitialState());
+
+    inputBuffer.push('$');
+    for (auto it = word.rbegin(); it != word.rend(); ++it) {
+        inputBuffer.push(*it);
+    }
+
+    while (!stack.empty() && !inputBuffer.empty()) {
+        int state = stack.top();
+        char symbol = inputBuffer.top();
+
+        std::string action = actionTable[{state, symbol}];
+
+        if (action.substr(0, 1) == "s") {
+            int nextState = std::stoi(action.substr(1));
+            stack.push(nextState);
+            inputBuffer.pop();
+        }
+        else if (action.substr(0, 1) == "r") {
+            // MISTAKE!
+            int ruleIndex = std::stoi(action.substr(1));
+            ProductionRule rule = grammar.getProductionRules()[ruleIndex];
+            for (int i = 0; i < rule.getRightPart().size(); i++) {
+                stack.pop();
+            }
+            char nonterminal = rule.getLeftPart()[0];
+            int newState = gotoTable[{state, nonterminal}];
+            stack.push(newState);
+
+        }
+        else if (action == "acc") {
+            std::cout << "The input word is accepted by the grammar.\n";
+            return;
+        }
+        else {
+            std::cout << "Error: the input word is not accepted by the grammar.\n";
+            return;
+        }
+    }
 }
 
 Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g) {
@@ -425,7 +536,59 @@ Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g
         }
     }
 
-    return a;
+    for (int i = 0; i < a.getStates()->size(); i++) {
+        bool emptyState = true;
+        for (int j = 0; j < a.getStates()->size(); j++) {
+            if (a.getTransitionMatrix()->get(i, j) != '0') {
+                emptyState = false;
+                break;
+            }
+        }
+        if (emptyState) {
+            for (int j = 0; j < a.getStates()->size(); j++) {
+                if (a.getTransitionMatrix()->get(j, i) != '0') {
+                    emptyState = false;
+                    break;
+                }
+            }
+
+            if (emptyState) {
+                std::vector<ProductionRule> empty;
+                a.getStates()->at(i) = empty;
+            }
+        }
+    }
+
+    Automaton result;
+
+    std::map<int, int> map;
+    int index = 0;
+    for (int i = 0; i < a.getStates()->size(); i++) {
+        if (!a.getStates()->at(i).empty()) {
+            map.insert({i, index});
+            if (a.getFinalStates().count(i) > 0) {
+                result.addFinalState(index);
+            }
+            result.add(a.getStates()->at(i));
+            index++;
+        }
+    }
+
+    for (int i = 0; i < a.getStates()->size(); i++) {
+        if (!a.getStates()->at(i).empty()) {
+            if (i == 1) {
+                std::cout << a.getStates()->at(i)[0].toString();
+            }
+            for (int j = 0; j < a.getStates()->size(); j++) {
+                if (a.getTransitionMatrix()->get(i, j) != '0') {
+                    result.getTransitionMatrix()->set(map[i], map[j], a.getTransitionMatrix()->get(i, j));
+                }
+            }
+        }
+    }
+
+
+    return result;
 }
 
 void slr1::constructFirst(Grammar grammar, std::map<char, std::set<char>>* first) {

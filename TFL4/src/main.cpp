@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     // E - EPSILON
     grammar.setTerminals(terminals);
     grammar.setNonterminals(nonterminals);
-    grammar.setStartSymbol('S');
+    grammar.setStartSymbol(rules[0].getLeftPart()[0]);
     grammar.setProductionRules(rules);
 
     slr1::parse(grammar, "word");

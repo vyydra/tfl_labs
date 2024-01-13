@@ -112,6 +112,7 @@ namespace slr1 {
         public:
         void add(std::vector<ProductionRule> state);
         void setInitialState(int state);
+        int getInitialState();
         void addFinalState(int state);
         void removeFinalState(int state);
         std::vector<std::vector<ProductionRule>>* getStates();
