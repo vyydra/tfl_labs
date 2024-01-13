@@ -122,7 +122,6 @@ namespace slr1 {
 
     /**
      * https://neerc.ifmo.ru/wiki/index.php?title=LR(0)-разбор
-     * http://gas-teach.narod.ru/au/tfl/tfl13.pdf
     */
     void parse(Grammar grammar, std::string word);
 
@@ -147,4 +146,9 @@ namespace slr1 {
      * https://ru.wikipedia.org/wiki/SLR(1)
     */
     void constructFollow(Grammar grammar, std::map<char, std::set<char>>* first, std::map<char, std::set<char>>* follow);
+
+    /**
+     * http://gas-teach.narod.ru/au/tfl/tfl13.pdf
+    */
+    std::vector<std::map<char, std::pair<std::string, int>>> buildSLR1Table(Grammar grammar, bool* slrProperty);
 }

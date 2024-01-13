@@ -146,6 +146,42 @@ std::string Automaton::toString() {
 }
 
 void slr1::parse(Grammar grammar, std::string word) {
+
+    bool slrProperty;
+
+    std::vector<std::map<char, std::pair<std::string, int>>> table = buildSLR1Table(grammar, &slrProperty);
+
+    if (!slrProperty) {
+        std::cout << "BAD";
+    }
+
+    std::cout << "SLR(1) TABLE: " << std::endl;
+
+    for (int i = 0; i < table.size(); i++) {
+        std::cout << i << ":" << std::endl;
+        std::pair<std::string, int> pair("", 0);
+        for (auto terminal : grammar.getTerminals()) {
+            if (table[i][terminal].first != "") {
+                std::cout << terminal << " [" << table[i][terminal].first << ", " << table[i][terminal].second << "]" << std::endl;
+            }
+        }
+
+        if (table[i]['~'].first != "") {
+            std::cout << '~' << " [" << table[i]['~'].first << ", " << table[i]['~'].second << "]" << std::endl;
+        }
+
+        for (auto nonterminal : grammar.getNonterminals()) {
+            if (table[i][nonterminal].first != "") {
+                std::cout << nonterminal << " [" << table[i][nonterminal].first << ", " << table[i][nonterminal].second << "]" << std::endl;
+            }
+        }
+
+        std::cout << std::endl;
+    }
+}
+
+std::vector<std::map<char, std::pair<std::string, int>>> slr1::buildSLR1Table(Grammar grammar, bool* slrProperty) {
+
     std::vector<ProductionRule> g;
     g.push_back(ProductionRule("s0", ".S")); // s0 = S₀ 's' must be small for this algorithm
     for (int i = 0; i < grammar.getProductionRules().size(); i++) {
@@ -219,11 +255,16 @@ void slr1::parse(Grammar grammar, std::string word) {
         table.push_back(map);
     }
 
+    *slrProperty = true;
+
     for (int i = 0; i < automaton.getStates()->size(); i++) {
         for (int j = 0; j < automaton.getStates()->at(i).size(); j++) {
             ProductionRule item = automaton.getStates()->at(i)[j];
             if (item.getLeftPart() == "s0" && item.getRightPart() == "S.") {
                 std::pair<std::string, int> pair("accept", 0);
+                if (table[i]['~'].first != "" && (table[i]['~'].first != pair.first || table[i]['~'].second != pair.second)) {
+                    *slrProperty = false;
+                }
                 table[i]['~'] = pair;
             } else if (item.getRightPart()[item.getRightPart().length() - 1] == '.') {
                 for (auto a : follow[item.getLeftPart()[0]]) {
@@ -236,6 +277,9 @@ void slr1::parse(Grammar grammar, std::string word) {
                         }
                     }
                     std::pair<std::string, int> pair("reduce", index);
+                    if (table[i][a].first != "" && (table[i][a].first != pair.first || table[i][a].second != pair.second)) {
+                        *slrProperty = false;
+                    }
                     table[i][a] = pair;
                 }
             } else if (isNonTerminal(grammar, item.getRightPart()[item.getRightPart().find('.') + 1])) {
@@ -248,6 +292,9 @@ void slr1::parse(Grammar grammar, std::string word) {
                     }
                 }
                 std::pair<std::string, int> pair("goto", index);
+                if (table[i][nonterminal].first != "" && (table[i][nonterminal].first != pair.first || table[i][nonterminal].second != pair.second)) {
+                    *slrProperty = false;
+                }
                 table[i][nonterminal] = pair;
             } else {
                 char terminal = item.getRightPart()[item.getRightPart().find('.') + 1];
@@ -259,41 +306,15 @@ void slr1::parse(Grammar grammar, std::string word) {
                     }
                 }
                 std::pair<std::string, int> pair("shift", index);
+                if (table[i][terminal].first != "" && (table[i][terminal].first != pair.first || table[i][terminal].second != pair.second)) {
+                    *slrProperty = false;
+                }
                 table[i][terminal] = pair;
             }
         }
     }
 
-    std::cout << "SLR(1) TABLE: " << std::endl;
-
-    for (int i = 0; i < table.size(); i++) {
-        std::cout << i << ":" << std::endl;
-        std::pair<std::string, int> pair("", 0);
-        for (auto terminal : grammar.getTerminals()) {
-            if (table[i][terminal].first != "") {
-                std::cout << terminal << " [" << table[i][terminal].first << ", " << table[i][terminal].second << "]" << std::endl;
-            }
-        }
-
-        if (table[i]['~'].first != "") {
-            std::cout << '~' << " [" << table[i]['~'].first << ", " << table[i]['~'].second << "]" << std::endl;
-        }
-
-        for (auto nonterminal : grammar.getNonterminals()) {
-            if (table[i][nonterminal].first != "") {
-                std::cout << nonterminal << " [" << table[i][nonterminal].first << ", " << table[i][nonterminal].second << "]" << std::endl;
-            }
-        }
-
-        std::cout << std::endl;
-    }
-
-
-    // ...
-
-    // PARSING
-
-    // ...
+    return table;
 }
 
 Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g) {
