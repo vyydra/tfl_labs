@@ -48,7 +48,22 @@ int main(int argc, char *argv[]) {
     grammar.setStartSymbol(rules[0].getLeftPart()[0]);
     grammar.setProductionRules(rules);
 
-    slr1::parse(grammar, "(n+(n))");
+    std::ifstream wordFile("word.txt");
+    std::string line;
+    std::string inputWord;
+
+    while (std::getline(wordFile, line)) {
+        std::replace(line.begin(), line.end(), ' ', '_');
+        inputWord += line;
+
+        if (!wordFile.eof()) {
+            inputWord += '$';
+        }
+    }
+
+    wordFile.close();
+
+    slr1::parse(grammar, inputWord);
     
     return 0;
 }

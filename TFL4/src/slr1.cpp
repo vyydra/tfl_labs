@@ -298,6 +298,9 @@ void slr1::parse(Grammar grammar, std::string word) {
         inputBuffer.push(*it);
     }
 
+    std::stack<std::pair<int, int>> positionStack;
+    positionStack.push({ 1, 0 });
+
     while (!stack.empty() && !inputBuffer.empty()) {
         int state = stack.top();
         char symbol = inputBuffer.top();
@@ -308,10 +311,19 @@ void slr1::parse(Grammar grammar, std::string word) {
             int nextState = std::stoi(action.substr(1));
             stack.push(nextState);
             inputBuffer.pop();
-        }
-        else if (action.substr(0, 1) == "r") {
+            int line = positionStack.top().first;
+            int column = positionStack.top().second + 1;
+            if (symbol == '$') {
+                line++;
+                column = 1;
+            }
+            positionStack.push({ line, column });
+        } else if (action.substr(0, 1) == "r") {
             int ruleIndex = std::stoi(action.substr(1));
             ProductionRule rule = grammar.getProductionRules()[ruleIndex];
+            for (int i = 0; i < rule.getRightPart().size(); i++) {
+                positionStack.pop();
+            }
             for (int i = 0; i < rule.getRightPart().size(); i++) {
                 stack.pop();
             }
@@ -319,13 +331,14 @@ void slr1::parse(Grammar grammar, std::string word) {
             int newState = gotoTable[{stack.top(), nonterminal}];
             stack.push(newState);
 
-        }
-        else if (action == "acc") {
+        } else if (action == "acc") {
             std::cout << "The input word is accepted by the grammar.\n";
             return;
-        }
-        else {
-            std::cout << "Error: the input word is not accepted by the grammar.\n";
+        } else {
+            int errorLine = positionStack.top().first;
+            int errorColumn = positionStack.top().second;
+            std::cout << "Error: the input word is not accepted by the grammar at line "
+                << errorLine << ", column " << errorColumn << ".\n";
             return;
         }
     }
