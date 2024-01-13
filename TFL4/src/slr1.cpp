@@ -228,17 +228,25 @@ void slr1::parse(Grammar grammar, std::string word) {
         follow[nonterminal].insert('~');
     }
 
+    bool isSLR1 = true;
+
     for (int state = 0; state < automaton.getStates()->size(); state++) {
         for (char terminal : grammar.getTerminals()) {
             for (int nextState = 0; nextState < automaton.getStates()->size(); nextState++) {
                 if (automaton.getTransitionMatrix()->get(state, nextState) == terminal) {
+                    if (actionTable.find({ state, terminal }) != actionTable.end()) {
+                        std::string existingAction = actionTable[{state, terminal}];
+                        if (existingAction != "" && existingAction != "s" + std::to_string(nextState)) {
+                            std::cout << "Grammar is not SLR(1): Conflict in actionTable at state " << state << " and terminal '" << terminal << "'." << std::endl;
+                            isSLR1 = false;
+                            return;
+                        }
+                    }
                     actionTable[{state, terminal}] = "s" + std::to_string(nextState);
                 }
             }
         }
     }
-
-    char i = grammar.getStartSymbol();
 
     for (int state = 0; state < automaton.getStates()->size(); state++) {
         for (int itemNum = 0; itemNum < automaton.getStates()->at(state).size(); itemNum++) {
@@ -263,6 +271,14 @@ void slr1::parse(Grammar grammar, std::string word) {
                             for (auto rule : grammar.getProductionRules()) {
                                 if (rule.getLeftPart() == item.getLeftPart()) {
                                     if (rule.getRightPart() == merged) {
+                                        if (actionTable.find({ state, symbol }) != actionTable.end()) {
+                                            std::string existingAction = actionTable[{state, symbol}];
+                                            if (existingAction != "" && existingAction != "r" + std::to_string(ruleNumber)) {
+                                                std::cout << "Grammar is not SLR(1): Conflict in actionTable at state " << state << " and (non)terminal '" << symbol << "'." << std::endl;
+                                                isSLR1 = false;
+                                                return;
+                                            }
+                                        }
                                         actionTable[{state, symbol}] = "r" + std::to_string(ruleNumber);
                                     }
                                 }
@@ -318,28 +334,81 @@ void slr1::parse(Grammar grammar, std::string word) {
                 column = 1;
             }
             positionStack.push({ line, column });
-        } else if (action.substr(0, 1) == "r") {
+        }
+        else if (action.substr(0, 1) == "r") {
             int ruleIndex = std::stoi(action.substr(1));
             ProductionRule rule = grammar.getProductionRules()[ruleIndex];
             for (int i = 0; i < rule.getRightPart().size(); i++) {
-                positionStack.pop();
-            }
-            for (int i = 0; i < rule.getRightPart().size(); i++) {
                 stack.pop();
             }
+
+            int line, column;
+            line = positionStack.top().first;
+            column = positionStack.top().second;
+            positionStack.pop();
+            positionStack.push({ line, column });
+
             char nonterminal = rule.getLeftPart()[0];
             int newState = gotoTable[{stack.top(), nonterminal}];
             stack.push(newState);
 
-        } else if (action == "acc") {
+        }
+        else if (action == "acc") {
             std::cout << "The input word is accepted by the grammar.\n";
             return;
-        } else {
+        }
+        else {
             int errorLine = positionStack.top().first;
             int errorColumn = positionStack.top().second;
             std::cout << "Error: the input word is not accepted by the grammar at line "
                 << errorLine << ", column " << errorColumn << ".\n";
-            return;
+            
+            int errorState = stack.top();
+            std::set<char> possibleSyncTokens;
+
+            for (auto nonterminal : grammar.getNonterminals()) {
+                auto followSet = follow[nonterminal];
+                possibleSyncTokens.insert(followSet.begin(), followSet.end());
+            }
+
+            char nextSymbol;
+            // entering panic mode
+            do {
+                nextSymbol = inputBuffer.top();
+
+                if (possibleSyncTokens.count(nextSymbol) > 0) {
+                    ProductionRule pseudoReductionRule("", "");
+                    bool ruleFound = false;
+                    for (auto& item : automaton.getStates()->at(errorState)) {
+                        std::string rightPart = item.getRightPart();
+                        if (!rightPart.empty() && rightPart.back() == '.') {
+                            pseudoReductionRule = ProductionRule(item.getLeftPart(), rightPart.substr(0, rightPart.size() - 1));
+                            ruleFound = true;
+                            break;
+                        }
+                    }
+                    if (!ruleFound) {
+                        std::cerr << "Error: No empty production rule found for pseudo-reduction.\n";
+                        return;
+                    }
+
+                    stack.pop();
+                    char nonterminal = pseudoReductionRule.getLeftPart()[0];
+                    int nextState = gotoTable[{stack.top(), nonterminal}];
+                    stack.push(nextState);
+
+                    std::cout << "Exiting panic mode and continuing with remaining input.\n";
+                    break;
+                }
+                else {
+                    inputBuffer.pop(); 
+                }
+            } while (!inputBuffer.empty());
+
+            if (inputBuffer.empty() && nextSymbol != '~') {
+                std::cout << "Unrecoverable error: No synchronizing token found.\n";
+                return;
+            }
         }
     }
 }
