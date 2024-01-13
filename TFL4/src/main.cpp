@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
     grammar.setStartSymbol(rules[0].getLeftPart()[0]);
     grammar.setProductionRules(rules);
 
-    slr1::parse(grammar, "word");
+    slr1::parse(grammar, "(n+(n))");
     
     return 0;
 }

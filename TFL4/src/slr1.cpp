@@ -225,7 +225,7 @@ void slr1::parse(Grammar grammar, std::string word) {
     std::map<std::pair<int, char>, std::string> actionTable;
     std::map<std::pair<int, char>, int> gotoTable;
     for (auto nonterminal : grammar.getNonterminals()) {
-        follow[nonterminal].insert('$');
+        follow[nonterminal].insert('~');
     }
 
     for (int state = 0; state < automaton.getStates()->size(); state++) {
@@ -273,7 +273,7 @@ void slr1::parse(Grammar grammar, std::string word) {
                 }
             }
             else if (item.getRightPart()[item.getRightPart().size() - 1] == '.') {
-                actionTable[{state, '$'}] = "acc";
+                actionTable[{state, '~'}] = "acc";
             }
         }
     }
@@ -293,7 +293,7 @@ void slr1::parse(Grammar grammar, std::string word) {
 
     stack.push(automaton.getInitialState());
 
-    inputBuffer.push('$');
+    inputBuffer.push('~');
     for (auto it = word.rbegin(); it != word.rend(); ++it) {
         inputBuffer.push(*it);
     }
@@ -310,14 +310,13 @@ void slr1::parse(Grammar grammar, std::string word) {
             inputBuffer.pop();
         }
         else if (action.substr(0, 1) == "r") {
-            // MISTAKE!
             int ruleIndex = std::stoi(action.substr(1));
             ProductionRule rule = grammar.getProductionRules()[ruleIndex];
             for (int i = 0; i < rule.getRightPart().size(); i++) {
                 stack.pop();
             }
             char nonterminal = rule.getLeftPart()[0];
-            int newState = gotoTable[{state, nonterminal}];
+            int newState = gotoTable[{stack.top(), nonterminal}];
             stack.push(newState);
 
         }
