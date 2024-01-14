@@ -314,6 +314,10 @@ std::vector<std::map<char, std::pair<std::string, int>>> slr1::buildSLR1Table(Gr
         }
     }
 
+    for (int i = 0; i < automaton.getStates()->size(); i++) {
+        std::cout << "PRIORITY" << i << ": " << rules[getPriorityRuleIndex(grammar, automaton, i, true)].toString() << std::endl;
+    }
+
     return table;
 }
 
@@ -705,4 +709,224 @@ bool slr1::isContained(std::vector<ProductionRule> rules, ProductionRule rule) {
     }
 
     return contained;
+}
+
+int slr1::getPriorityRuleIndex(Grammar grammar, Automaton automaton, int state, bool flag) {
+    std::vector<ProductionRule> rules;
+    for (int i = 0; i < automaton.getStates()->at(state).size(); i++) {
+        std::string rightPart = automaton.getStates()->at(state)[i].getRightPart();
+        rightPart.erase(rightPart.find('.'), 1);
+        rules.push_back(ProductionRule(automaton.getStates()->at(state)[i].getLeftPart(), rightPart));
+    }
+
+    if (rules.size() == 1) {
+        // S₀ -> ...
+        if (!isNonTerminal(grammar, rules[0].getLeftPart()[0])) {
+            return 0;
+        } else {
+            for (int i = 0; i < grammar.getProductionRules().size(); i++) {
+                if (grammar.getProductionRules()[i].getLeftPart() == rules[0].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules[0].getRightPart()) {
+                    return i + 1;
+                }
+            }
+        }
+    }
+
+    if (flag) {
+        for (auto rule : rules) {
+            // S₀ -> ...
+            if (!isNonTerminal(grammar, rule.getLeftPart()[0])) {
+                return 0;
+            }
+        }
+
+        std::set<char> nonterminals;
+
+        for (auto rule : rules) {
+            nonterminals.insert(rule.getLeftPart()[0]);
+        }
+
+        if (nonterminals.size() == 1) {
+            int index = getMaxLengthPhiRuleIndex(automaton.getStates()->at(state), rules[0].getLeftPart()[0]);
+            for (int i = 0; i < grammar.getProductionRules().size(); i++) {
+                if (grammar.getProductionRules()[i].getLeftPart() == rules[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules[index].getRightPart()) {
+                    return i + 1;
+                }
+            }
+        }
+
+        NonterminalNode root(grammar.getStartSymbol());
+        buildNonterminalTree(&root, grammar, rules);
+
+        for (auto ni : nonterminals) {
+            bool accept = true;
+
+            for (auto nj : nonterminals) {
+                if (ni == nj) {
+                    continue;
+                }
+                if (!dfs2(dfs3(&root, ni, nj), nj, '0')) {
+                    accept = false;
+                    break;
+                }
+                if (dfs2(&root, nj, ni)) {
+                    accept = false;
+                    break;
+                }
+            }
+
+            if (accept) {
+                int index = getMaxLengthPhiRuleIndex(automaton.getStates()->at(state), ni);
+                for (int i = 0; i < grammar.getProductionRules().size(); i++) {
+                    if (grammar.getProductionRules()[i].getLeftPart() == rules[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules[index].getRightPart()) {
+                        return i + 1;
+                    }
+                }
+            }
+        }
+    } else {
+        for (int i = 0; i < rules.size(); i++) {
+            // S₀ -> ...
+            if (!isNonTerminal(grammar, rules[i].getLeftPart()[0])) {
+                rules.erase(rules.cbegin() + i);
+                break;
+            }
+        }
+
+        std::set<char> nonterminals;
+
+        for (auto rule : rules) {
+            nonterminals.insert(rule.getLeftPart()[0]);
+        }
+
+        if (nonterminals.size() == 1) {
+            int index = getMinLengthPhiRuleIndex(automaton.getStates()->at(state), rules[0].getLeftPart()[0]);
+            for (int i = 0; i < grammar.getProductionRules().size(); i++) {
+                if (grammar.getProductionRules()[i].getLeftPart() == rules[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules[index].getRightPart()) {
+                    return i + 1;
+                }
+            }
+        }
+
+        NonterminalNode root(grammar.getStartSymbol());
+        buildNonterminalTree(&root, grammar, rules);
+
+        for (auto ni : nonterminals) {
+            bool accept = true;
+
+            for (auto nj : nonterminals) {
+                if (!dfs2(dfs3(&root, ni, nj), nj, '0')) {
+                    accept = false;
+                    break;
+                }
+                if (dfs2(&root, nj, ni)) {
+                    accept = false;
+                    break;
+                }
+            }
+
+            if (accept) {
+                int index = getMinLengthPhiRuleIndex(automaton.getStates()->at(state), ni);
+                for (int i = 0; i < grammar.getProductionRules().size(); i++) {
+                    if (grammar.getProductionRules()[i].getLeftPart() == rules[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules[index].getRightPart()) {
+                        return i + 1;
+                    }
+                }
+            }
+        }
+
+    }
+
+    return -1;
+}
+
+int slr1::getMaxLengthPhiRuleIndex(std::vector<ProductionRule> rules, char nonterminal) {
+    int index = -1;
+    int max = -1;
+    for (int i = 0; i < rules.size(); i++) {
+        // Ni -> Ф.Y
+        // length = |Ф|
+        if (rules[i].getLeftPart()[0] == nonterminal) {
+            int length = rules[i].getRightPart().find('.');
+            if (max < length) {
+                max = length;
+                index = i;
+            }
+        }
+    }
+
+    return index;
+}
+
+int slr1::getMinLengthPhiRuleIndex(std::vector<ProductionRule> rules, char nonterminal) {
+    int index = -1;
+    int min = 2147483647;
+    for (int i = 0; i < rules.size(); i++) {
+        // Ni -> Ф.Y
+        // length = |Ф|
+        if (rules[i].getLeftPart()[0] == nonterminal) {
+            int length = rules[i].getRightPart().find('.');
+            if (min > length) {
+                min = length;
+                index = i;
+            }
+        }
+    }
+
+    return index;
+}
+
+void slr1::buildNonterminalTree(NonterminalNode* node, Grammar grammar, std::vector<ProductionRule> rules) {
+    std::set<char> nonterminals;
+    for (auto rule : rules) {
+        if (rule.getLeftPart()[0] == node->getNonterminal()) {
+            for (auto symbol : rule.getRightPart()) {
+                if (isNonTerminal(grammar, symbol)) {
+                    nonterminals.insert(symbol);
+                }
+            }
+        }
+    }
+
+    for (auto nonterminal : nonterminals) {
+        node->add(nonterminal);
+    }
+
+    for (int i = 0; i < node->getNodes()->size(); i++) {
+        buildNonterminalTree(node->getNodes()->at(i), grammar, rules);
+    }
+}
+
+bool slr1::dfs2(NonterminalNode* node, char destinationNonterminal, char exclusiveNonterminal) {
+    if (node->getNonterminal() == exclusiveNonterminal) {
+        return false;
+    }
+
+    if (node->getNonterminal() == destinationNonterminal) {
+        return true;
+    }
+
+	for(int i = 0; i < node->getNodes()->size(); i++) {
+        bool reached = dfs2(node->getNodes()->at(i), destinationNonterminal, exclusiveNonterminal);
+        if (reached) {
+            return true;
+        }
+	}
+
+	return false;
+}
+
+NonterminalNode* slr1::dfs3(NonterminalNode* node, char startNonterminal, char destinationNonterminal) {
+    if (node->getNonterminal() == destinationNonterminal) {
+        return node;
+    }
+
+	for(int i = 0; i < node->getNodes()->size(); i++) {
+        NonterminalNode* n = dfs3(node->getNodes()->at(i), startNonterminal, destinationNonterminal);
+        if (n != nullptr) {
+            return n;
+        }
+	}
+
+	return nullptr;
 }
