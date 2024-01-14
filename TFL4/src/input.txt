@@ -1,3 +1,4 @@
-S -> Q$T
-Q -> a_b
-T -> c_d
+S -> S+T
+S -> T
+T -> n
+T -> (S)

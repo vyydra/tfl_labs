@@ -124,7 +124,7 @@ namespace slr1 {
     /**
      * https://neerc.ifmo.ru/wiki/index.php?title=LR(0)-разбор
     */
-    void parse(Grammar grammar, std::string word);
+    void parse(Grammar grammar, std::string word, bool keySeniority);
 
     std::vector<ProductionRule> closure(std::vector<ProductionRule> items, std::vector<ProductionRule> rules, Grammar grammar);
 

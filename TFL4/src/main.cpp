@@ -6,13 +6,22 @@
 #include <sstream>
 
 int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        std::cerr << "No argument passed.\n";
+        return 1;
+    }
+
+    std::istringstream iss(argv[1]);
+    bool keySeniority;
+    iss >> std::boolalpha >> keySeniority;
+
     std::vector<slr1::ProductionRule> rules;
 
     std::ifstream file("input.txt");
 
     std::string s;
 
-    while(std::getline(file, s)) {
+    while (std::getline(file, s)) {
         std::stringstream ss(s);  
         std::string leftPart;
         std::string str;
@@ -42,7 +51,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // E - EPSILON
     grammar.setTerminals(terminals);
     grammar.setNonterminals(nonterminals);
     grammar.setStartSymbol(rules[0].getLeftPart()[0]);
@@ -63,7 +71,7 @@ int main(int argc, char *argv[]) {
 
     wordFile.close();
 
-    slr1::parse(grammar, inputWord);
+    slr1::parse(grammar, inputWord, keySeniority);
     
     return 0;
 }

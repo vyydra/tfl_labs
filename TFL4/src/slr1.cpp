@@ -150,7 +150,7 @@ std::string Automaton::toString() {
     return ss.str();
 }
 
-void slr1::parse(Grammar grammar, std::string word) {
+void slr1::parse(Grammar grammar, std::string word, bool keySeniority) {
     std::vector<ProductionRule> g;
     char lowercaseLetter = grammar.getProductionRules()[0].getLeftPart()[0] + 32;
     std::string lhs = std::string(1, lowercaseLetter) + "0";
@@ -380,13 +380,10 @@ void slr1::parse(Grammar grammar, std::string word) {
                 if (possibleSyncTokens.count(nextSymbol) > 0) {
                     ProductionRule pseudoReductionRule("", "");
                     bool ruleFound = false;
-                    for (auto& item : automaton.getStates()->at(errorState)) {
-                        std::string rightPart = item.getRightPart();
-                        if (!rightPart.empty() && rightPart.back() == '.') {
-                            pseudoReductionRule = ProductionRule(item.getLeftPart(), rightPart.substr(0, rightPart.size() - 1));
-                            ruleFound = true;
-                            break;
-                        }
+                    int highestPriorityRuleIndex = getPriorityRuleIndex(grammar, automaton, errorState, true);
+                    if (highestPriorityRuleIndex != -1) {
+                        pseudoReductionRule = grammar.getProductionRules()[highestPriorityRuleIndex];
+                        ruleFound = true;
                     }
                     if (!ruleFound) {
                         std::cerr << "Error: No empty production rule found for pseudo-reduction.\n";
@@ -447,10 +444,10 @@ Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g
                 std::vector<ProductionRule> state;
                 state.push_back(item);
                 automaton.add(state);
-                automaton.getTransitionMatrix()->set(stateNumber, automaton.getStates()->size() - 1, '1');
+                automaton.getTransitionMatrix()->set(stateNumber, automaton.getStates()->size() - 1, 'E');
                 queue.push(automaton.getStates()->size() - 1);
             } else {
-                automaton.getTransitionMatrix()->set(stateNumber, index, '1');
+                automaton.getTransitionMatrix()->set(stateNumber, index, 'E');
             }
         }
 
@@ -515,7 +512,7 @@ Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g
     for (int i = 0; i < a.getStates()->size(); i++) {
         bool exist = false;
         for (int j = 0; j < a.getStates()->size(); j++) {
-            if (a.getTransitionMatrix()->get(j, i) == '1' && i != j) {
+            if (a.getTransitionMatrix()->get(j, i) == 'E' && i != j) {
                 exist = true;
                 break;
             }
@@ -616,8 +613,11 @@ Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g
             a.getTransitionMatrix()->set(toRemoveStates[i], j, '0');
         }
 
-        if (a.getFinalStates().find(toRemoveStates[i]) != a.getFinalStates().end()) {
-            a.removeFinalState(toRemoveStates[i]);
+        std::set<int> finalStatesCopy = a.getFinalStates();
+        for (int i = 0; i < toRemoveStates.size(); i++) {
+            if (finalStatesCopy.find(toRemoveStates[i]) != finalStatesCopy.end()) {
+                a.removeFinalState(toRemoveStates[i]);
+            }
         }
     }
 
@@ -751,11 +751,11 @@ bool slr1::dfs(Automaton* automaton, Matrix<bool>* visitMatrix, int sVertex, std
         rules->push_back(automaton->getStates()->at(sVertex)[i]);
     }
 
-	for(int i = 0; i < visitMatrix->getN(); i++) {
-        if (automaton->getTransitionMatrix()->get(sVertex, i) != '1') {
+	for (int i = 0; i < visitMatrix->getN(); i++) {
+        if (automaton->getTransitionMatrix()->get(sVertex, i) != 'E') {
             continue;
         }
-		if(!visitMatrix->get(i, 0)) {
+		if (!visitMatrix->get(i, 0)) {
 			bool reached = dfs(automaton, visitMatrix, i, rules);
 			if (reached) {
                 return true;
@@ -767,7 +767,7 @@ bool slr1::dfs(Automaton* automaton, Matrix<bool>* visitMatrix, int sVertex, std
 
 std::vector<ProductionRule> slr1::closure(std::vector<ProductionRule> items, std::vector<ProductionRule> rules, Grammar grammar) {
     std::vector<ProductionRule> result;
-    for(auto item : items) {
+    for (auto item : items) {
         int index = 0;
         for (int i = 0; i < item.getRightPart().size(); i++) {
             if (item.getRightPart()[i] == '.') {
@@ -1038,7 +1038,7 @@ bool slr1::dfs2(NonterminalNode* node, char destinationNonterminal, char exclusi
         return true;
     }
 
-	for(int i = 0; i < node->getNodes()->size(); i++) {
+	for (int i = 0; i < node->getNodes()->size(); i++) {
         bool reached = dfs2(node->getNodes()->at(i), destinationNonterminal, exclusiveNonterminal);
         if (reached) {
             return true;
@@ -1053,7 +1053,7 @@ NonterminalNode* slr1::dfs3(NonterminalNode* node, char startNonterminal, char d
         return node;
     }
 
-	for(int i = 0; i < node->getNodes()->size(); i++) {
+	for (int i = 0; i < node->getNodes()->size(); i++) {
         NonterminalNode* n = dfs3(node->getNodes()->at(i), startNonterminal, destinationNonterminal);
         if (n != nullptr) {
             return n;
