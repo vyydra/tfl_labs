@@ -123,7 +123,6 @@ namespace slr1 {
 
     /**
      * https://neerc.ifmo.ru/wiki/index.php?title=LR(0)-разбор
-     * http://gas-teach.narod.ru/au/tfl/tfl13.pdf
     */
     void parse(Grammar grammar, std::string word);
 
@@ -148,4 +147,72 @@ namespace slr1 {
      * https://ru.wikipedia.org/wiki/SLR(1)
     */
     void constructFollow(Grammar grammar, std::map<char, std::set<char>>* first, std::map<char, std::set<char>>* follow);
+
+    /**
+     * http://gas-teach.narod.ru/au/tfl/tfl13.pdf
+    */
+    std::vector<std::map<char, std::pair<std::string, int>>> buildSLR1Table(Grammar grammar, bool* slrProperty);
+
+    class NonterminalNode {
+        private:
+        std::vector<NonterminalNode*> nodes;
+        std::set<char> parents;
+        char nonterminal;
+        public:
+        NonterminalNode(char nonterminal) {
+            this->nonterminal = nonterminal;
+        }
+        ~NonterminalNode() {
+            for (auto node : nodes) {
+                delete node;
+            }
+        }
+        void add(char nonterminal) {
+            if (parents.count(nonterminal) == 0) {
+                NonterminalNode* node = new NonterminalNode(nonterminal);
+                std::set<char> p = parents;
+                p.insert(nonterminal);
+                node->setParents(p);
+                nodes.push_back(node);
+            }
+        }
+
+        std::vector<NonterminalNode*>* getNodes() {
+            return &nodes;
+        }
+
+        std::set<char>* getParents() {
+            return &parents;
+        }
+
+        void setParents(std::set<char> parents) {
+            this->parents = parents;
+        }
+
+        char getNonterminal() {
+            return nonterminal;
+        }
+
+        void setNonterminal(char nonterminal) {
+            this->nonterminal = nonterminal;
+        }
+    };
+
+    /**
+     * @param grammar непополненная грамматика
+     * @param automaton
+     * @param state
+     * @param flag true, если приоритет от старшему к младшему, false - наоборот
+    */
+    int getPriorityRuleIndex(Grammar grammar, Automaton automaton, int state, bool flag);
+
+    int getMaxLengthPhiRuleIndex(std::vector<ProductionRule> rules, char nonterminal);
+
+    int getMinLengthPhiRuleIndex(std::vector<ProductionRule> rules, char nonterminal);
+
+    void buildNonterminalTree(NonterminalNode* node, Grammar grammar, std::vector<ProductionRule> rules);
+
+    bool dfs2(NonterminalNode* node, char destinationNonterminal, char exclusiveNonterminal);
+
+    NonterminalNode* dfs3(NonterminalNode* root, char startNonterminal, char destinationNonterminal);
 }
