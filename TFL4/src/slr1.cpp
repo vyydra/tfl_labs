@@ -316,7 +316,6 @@ void slr1::parse(Grammar grammar, std::string word) {
     positionStack.push({ 1, 1 });
 
     bool panicMode = false;
-    std::stack<int> backupStack;
 
     while (!stack.empty() && !inputBuffer.empty()) {
         int state = stack.top();
