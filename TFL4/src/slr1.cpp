@@ -224,9 +224,6 @@ void slr1::parse(Grammar grammar, std::string word) {
 
     std::map<std::pair<int, char>, std::string> actionTable;
     std::map<std::pair<int, char>, int> gotoTable;
-    for (auto nonterminal : grammar.getNonterminals()) {
-        follow[nonterminal].insert('~');
-    }
 
     bool isSLR1 = true;
 
@@ -247,6 +244,7 @@ void slr1::parse(Grammar grammar, std::string word) {
             }
         }
     }
+
 
     for (int state = 0; state < automaton.getStates()->size(); state++) {
         for (int itemNum = 0; itemNum < automaton.getStates()->at(state).size(); itemNum++) {
@@ -315,7 +313,10 @@ void slr1::parse(Grammar grammar, std::string word) {
     }
 
     std::stack<std::pair<int, int>> positionStack;
-    positionStack.push({ 1, 0 });
+    positionStack.push({ 1, 1 });
+
+    bool panicMode = false;
+    std::stack<int> backupStack;
 
     while (!stack.empty() && !inputBuffer.empty()) {
         int state = stack.top();
@@ -354,15 +355,18 @@ void slr1::parse(Grammar grammar, std::string word) {
 
         }
         else if (action == "acc") {
-            std::cout << "The input word is accepted by the grammar.\n";
+            if (!panicMode) {
+                std::cout << "The input word is accepted by the grammar.\n";
+            }
             return;
         }
         else {
+            panicMode = true;
             int errorLine = positionStack.top().first;
             int errorColumn = positionStack.top().second;
             std::cout << "Error: the input word is not accepted by the grammar at line "
                 << errorLine << ", column " << errorColumn << ".\n";
-            
+
             int errorState = stack.top();
             std::set<char> possibleSyncTokens;
 
@@ -375,6 +379,14 @@ void slr1::parse(Grammar grammar, std::string word) {
             // entering panic mode
             do {
                 nextSymbol = inputBuffer.top();
+
+                int line = positionStack.top().first;
+                int column = positionStack.top().second + 1;
+                if (symbol == '$') {
+                    line++;
+                    column = 1;
+                }
+                positionStack.push({ line, column });
 
                 if (possibleSyncTokens.count(nextSymbol) > 0) {
                     ProductionRule pseudoReductionRule("", "");
@@ -392,16 +404,19 @@ void slr1::parse(Grammar grammar, std::string word) {
                         return;
                     }
 
-                    stack.pop();
-                    char nonterminal = pseudoReductionRule.getLeftPart()[0];
-                    int nextState = gotoTable[{stack.top(), nonterminal}];
-                    stack.push(nextState);
+                    if (nextSymbol != '~') {
+                        stack.pop();
+                        positionStack.pop();
+                        char nonterminal = pseudoReductionRule.getLeftPart()[0];
+                        int nextState = gotoTable[{stack.top(), nonterminal}];
+                        stack.push(nextState);
+                    }
 
                     std::cout << "Exiting panic mode and continuing with remaining input.\n";
                     break;
                 }
                 else {
-                    inputBuffer.pop(); 
+                    inputBuffer.pop();
                 }
             } while (!inputBuffer.empty());
 
@@ -695,7 +710,7 @@ void slr1::constructFirst(Grammar grammar, std::map<char, std::set<char>>* first
 }
 
 void slr1::constructFollow(Grammar grammar, std::map<char, std::set<char>>* first, std::map<char, std::set<char>>* follow) {
-    // //FOLLOW[S]={$}
+    follow->at(grammar.getStartSymbol()).insert('~');
     int j = 0;
     bool changed = true;
     while (changed) {
