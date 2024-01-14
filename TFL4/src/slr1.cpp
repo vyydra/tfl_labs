@@ -315,7 +315,8 @@ std::vector<std::map<char, std::pair<std::string, int>>> slr1::buildSLR1Table(Gr
     }
 
     for (int i = 0; i < automaton.getStates()->size(); i++) {
-        std::cout << "PRIORITY" << i << ": " << rules[getPriorityRuleIndex(grammar, automaton, i, true)].toString() << std::endl;
+        bool flag = false;
+        std::cout << "PRIORITY" << "(flag=" << flag << ", state=" << i << "): " << rules[getPriorityRuleIndex(grammar, automaton, i, flag)].toString() << std::endl;
     }
 
     return table;
@@ -719,6 +720,13 @@ int slr1::getPriorityRuleIndex(Grammar grammar, Automaton automaton, int state, 
         rules.push_back(ProductionRule(automaton.getStates()->at(state)[i].getLeftPart(), rightPart));
     }
 
+    std::vector<ProductionRule> rules2;
+    for (int i = 0; i < automaton.getStates()->at(state).size(); i++) {
+        std::string rightPart = automaton.getStates()->at(state)[i].getRightPart();
+        rightPart.erase(rightPart.find('.'), 1);
+        rules2.push_back(ProductionRule(automaton.getStates()->at(state)[i].getLeftPart(), rightPart));
+    }
+
     if (rules.size() == 1) {
         // S₀ -> ...
         if (!isNonTerminal(grammar, rules[0].getLeftPart()[0])) {
@@ -802,7 +810,7 @@ int slr1::getPriorityRuleIndex(Grammar grammar, Automaton automaton, int state, 
         if (nonterminals.size() == 1) {
             int index = getMinLengthPhiRuleIndex(automaton.getStates()->at(state), rules[0].getLeftPart()[0]);
             for (int i = 0; i < grammar.getProductionRules().size(); i++) {
-                if (grammar.getProductionRules()[i].getLeftPart() == rules[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules[index].getRightPart()) {
+                if (grammar.getProductionRules()[i].getLeftPart() == rules2[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules2[index].getRightPart()) {
                     return i + 1;
                 }
             }
@@ -811,30 +819,59 @@ int slr1::getPriorityRuleIndex(Grammar grammar, Automaton automaton, int state, 
         NonterminalNode root(grammar.getStartSymbol());
         buildNonterminalTree(&root, grammar, rules);
 
-        for (auto ni : nonterminals) {
-            bool accept = true;
+        std::map<char, std::map<char, bool>> map;
 
+        for (auto ni : nonterminals) {
+            std::map<char, bool> m;
             for (auto nj : nonterminals) {
+                if (ni == nj) {
+                    continue;
+                }
+                m.insert({nj, false});
+            }
+            map.insert({ni, m});
+        }
+
+        for (auto ni : nonterminals) {
+            for (auto nj : nonterminals) {
+                bool isGreater = true;
+
+                if (ni == nj) {
+                    continue;
+                }
+
                 if (!dfs2(dfs3(&root, ni, nj), nj, '0')) {
-                    accept = false;
-                    break;
+                    isGreater = false;
                 }
                 if (dfs2(&root, nj, ni)) {
+                    isGreater = false;
+                }
+
+                map[ni][nj] = isGreater;
+            }
+        }
+
+        for (auto nj : nonterminals) {
+            bool accept = true;
+            for (auto ni : nonterminals) {
+                if (ni == nj) {
+                    continue;
+                }
+                if (map[ni][nj] == false) {
                     accept = false;
                     break;
                 }
             }
 
             if (accept) {
-                int index = getMinLengthPhiRuleIndex(automaton.getStates()->at(state), ni);
+                int index = getMinLengthPhiRuleIndex(automaton.getStates()->at(state), nj);
                 for (int i = 0; i < grammar.getProductionRules().size(); i++) {
-                    if (grammar.getProductionRules()[i].getLeftPart() == rules[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules[index].getRightPart()) {
+                    if (grammar.getProductionRules()[i].getLeftPart() == rules2[index].getLeftPart() && grammar.getProductionRules()[i].getRightPart() == rules2[index].getRightPart()) {
                         return i + 1;
                     }
                 }
             }
         }
-
     }
 
     return -1;
