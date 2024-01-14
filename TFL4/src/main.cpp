@@ -11,6 +11,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    if (strcmp(argv[1], "true") != 0 && strcmp(argv[1], "false") != 0) {
+        std::cerr << "Invalid key argument.\n";
+        return 1;
+    }
+
     std::istringstream iss(argv[1]);
     bool keySeniority;
     iss >> std::boolalpha >> keySeniority;
