@@ -396,6 +396,8 @@ void slr1::parse(Grammar grammar, std::string word, bool keySeniority) {
                         char nonterminal = pseudoReductionRule.getLeftPart()[0];
                         int nextState = gotoTable[{stack.top(), nonterminal}];
                         stack.push(nextState);
+                    } else {
+                        inputBuffer.pop();
                     }
 
                     std::cout << "Exiting panic mode and continuing with remaining input.\n";
