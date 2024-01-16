@@ -359,9 +359,14 @@ void slr1::parse(Grammar grammar, std::string word, bool keySeniority) {
             int errorState = stack.top();
             std::set<char> possibleSyncTokens;
 
-            for (auto nonterminal : grammar.getNonterminals()) {
-                auto followSet = follow[nonterminal];
-                possibleSyncTokens.insert(followSet.begin(), followSet.end());
+            ProductionRule pseudoReductionRule("", "");
+            bool ruleFound = false;
+
+            int highestPriorityRuleIndex = getPriorityRuleIndex(grammar, automaton, errorState, keySeniority);
+
+            if (highestPriorityRuleIndex != -1) {
+                pseudoReductionRule = rules[highestPriorityRuleIndex];
+                ruleFound = true;
             }
 
             char nextSymbol;
@@ -377,14 +382,7 @@ void slr1::parse(Grammar grammar, std::string word, bool keySeniority) {
                 }
                 positionStack.push({ line, column });
 
-                if (possibleSyncTokens.count(nextSymbol) > 0) {
-                    ProductionRule pseudoReductionRule("", "");
-                    bool ruleFound = false;
-                    int highestPriorityRuleIndex = getPriorityRuleIndex(grammar, automaton, errorState, true);
-                    if (highestPriorityRuleIndex != -1) {
-                        pseudoReductionRule = grammar.getProductionRules()[highestPriorityRuleIndex];
-                        ruleFound = true;
-                    }
+                if (follow[pseudoReductionRule.getLeftPart()[0]].count(nextSymbol) > 0) {
                     if (!ruleFound) {
                         std::cerr << "Error: No empty production rule found for pseudo-reduction.\n";
                         return;
@@ -548,7 +546,9 @@ Automaton slr1::buildLR0Automaton(Grammar grammar, std::vector<ProductionRule> g
 
     std::vector<int> toRemoveStates;
 
-    for (int i = 0; i < a.getStates()->size(); i++) {
+    int f = a.getStates()->size();
+
+    for (int i = 0; i < f; i++) {
         std::vector<std::pair<char, std::vector<int>>> pairs;
         for (int j = 0; j < a.getStates()->size(); j++) {
             char symbol = a.getTransitionMatrix()->get(i, j);
